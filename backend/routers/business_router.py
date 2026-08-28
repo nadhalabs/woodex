@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Business
 from backend.schemas import BusinessResponse
-from backend.auth import get_current_business, get_current_user, User
+from backend.auth import get_current_business, require_owner
 
 router = APIRouter(prefix="/business", tags=["Business & Plan Settings"])
 
@@ -28,16 +28,12 @@ def get_business_details(
 ):
     return business
 
-@router.put("", response_model=BusinessResponse)
+@router.put("", response_model=BusinessResponse, dependencies=[Depends(require_owner)])
 def update_business_details(
     req: BusinessUpdateRequest,
     db: Session = Depends(get_db),
     business: Business = Depends(get_current_business),
-    current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only owners can modify business settings")
-
     if req.name is not None:
         business.name = req.name
     if req.phone is not None:

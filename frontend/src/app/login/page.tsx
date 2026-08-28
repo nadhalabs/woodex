@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, Store, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('owner@oakwood.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,11 +30,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickLogin = (loginEmail: string) => {
-    setEmail(loginEmail);
-    setPassword('password123');
   };
 
   return (
@@ -106,45 +101,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Login Preset Buttons */}
-          <div className="mt-8 pt-6 border-t border-zinc-850">
-            <div className="flex items-center gap-2 text-zinc-400 font-bold text-xs tracking-widest uppercase mb-3">
-              <Sparkles className="w-4 h-4 text-white" />
-              <span>1-Click Demo Accounts</span>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => quickLogin('owner@oakwood.com')}
-                className="w-full text-left p-3 rounded-xl bg-black hover:bg-zinc-900 border border-zinc-800 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-2">
-                    <Store className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white" />
-                    Oakwood Furniture Store
-                  </div>
-                  <div className="text-[11px] text-zinc-400">WOODEX Lite Plan • Owner Account</div>
-                </div>
-                <span className="text-xs font-bold text-zinc-300 group-hover:text-white uppercase tracking-wider">Select</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickLogin('owner@timbercraft.com')}
-                className="w-full text-left p-3 rounded-xl bg-black hover:bg-zinc-900 border border-zinc-800 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-2">
-                    <Store className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white" />
-                    TimberCraft Luxury Showroom
-                  </div>
-                  <div className="text-[11px] text-zinc-400">WOODEX Standard Plan • Owner Account</div>
-                </div>
-                <span className="text-xs font-bold text-zinc-300 group-hover:text-white uppercase tracking-wider">Select</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

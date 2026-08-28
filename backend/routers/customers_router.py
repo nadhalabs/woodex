@@ -5,7 +5,7 @@ from sqlalchemy import or_
 from backend.database import get_db
 from backend.models import Customer, Business, Order
 from backend.schemas import CustomerCreate, CustomerUpdate, CustomerResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
@@ -101,7 +101,7 @@ def update_customer(
     db.refresh(customer)
     return customer
 
-@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager_or_owner)])
 def delete_customer(
     customer_id: str,
     db: Session = Depends(get_db),

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON, Boolean, CheckConstraint, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -29,6 +29,10 @@ class Business(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        CheckConstraint("plan IN ('lite', 'standard')", name="ck_businesses_plan_valid"),
+    )
+
     users = relationship("User", back_populates="business", cascade="all, delete-orphan")
     categories = relationship("Category", back_populates="business", cascade="all, delete-orphan")
     customers = relationship("Customer", back_populates="business", cascade="all, delete-orphan")
@@ -45,7 +49,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    business_id = Column(String, ForeignKey("businesses.id"), nullable=False, index=True)
+    business_id = Column(String, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     slug = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -53,8 +57,8 @@ class Category(Base):
     image_public_id = Column(String, nullable=True)
     display_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
         UniqueConstraint("business_id", "slug", name="uq_categories_business_slug"),
@@ -76,6 +80,10 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False, default="owner")  # "owner", "manager", "staff"
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'manager', 'staff')", name="ck_users_role_valid"),
+    )
 
     business = relationship("Business", back_populates="users")
 
@@ -138,13 +146,13 @@ class ProductImage(Base):
     __tablename__ = "product_images"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    business_id = Column(String, ForeignKey("businesses.id"), nullable=False, index=True)
+    business_id = Column(String, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
     url = Column(String, nullable=False)
     public_id = Column(String, nullable=True)
     display_order = Column(Integer, nullable=False, default=0)
     is_primary = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
         Index("ix_product_images_product_display_order", "product_id", "display_order"),
@@ -160,7 +168,7 @@ class Quotation(Base):
     business_id = Column(String, ForeignKey("businesses.id"), nullable=False, index=True)
     quotation_number = Column(String, nullable=False, index=True)
     customer_id = Column(String, ForeignKey("customers.id"), nullable=False)
-    status = Column(String, nullable=False, default="draft")  # draft, sent, accepted, rejected
+    status = Column(String, nullable=False, default="draft")  # draft, sent, accepted, rejected, converted
     validity_date = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
     subtotal = Column(Float, nullable=False, default=0.0)
@@ -169,6 +177,10 @@ class Quotation(Base):
     tax_amount = Column(Float, nullable=False, default=0.0)
     total_amount = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "quotation_number", name="uq_quotations_business_quotation_number"),
+    )
 
     business = relationship("Business", back_populates="quotations")
     customer = relationship("Customer", back_populates="quotations")
@@ -295,6 +307,7 @@ class Invoice(Base):
 
     __table_args__ = (
         UniqueConstraint("business_id", "invoice_number", name="uq_invoices_business_invoice_number"),
+        UniqueConstraint("order_id", name="uq_invoices_order_id"),
         Index("ix_invoices_business_invoice_number", "business_id", "invoice_number"),
     )
 
@@ -331,7 +344,7 @@ class BusinessSequence(Base):
     sequence_type = Column(String, nullable=False)  # 'order', 'invoice', 'quotation', 'purchase'
     year = Column(Integer, nullable=False, default=2026)
     current_val = Column(Integer, nullable=False, default=0)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
         UniqueConstraint("business_id", "sequence_type", "year", name="uq_business_seq_type_year"),
@@ -351,7 +364,7 @@ class CheckoutIdempotency(Base):
     order_id = Column(String, nullable=True)
     invoice_id = Column(String, nullable=True)
     response_data = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
         UniqueConstraint("business_id", "idempotency_key", name="uq_idempotency_business_key"),
@@ -369,7 +382,7 @@ class HeldBill(Base):
     business_id = Column(String, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
     hold_label = Column(String, nullable=False, default="Held Bill")
     bill_data = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     business = relationship("Business")
 
@@ -418,6 +431,10 @@ class Purchase(Base):
     payment_status = Column(String, nullable=False, default="unpaid")  # unpaid, partially_paid, paid
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "purchase_number", name="uq_purchases_business_purchase_number"),
+    )
 
     business = relationship("Business", back_populates="purchases")
     supplier = relationship("Supplier", back_populates="purchases")

@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
-from backend.database import Base, engine
 
 from backend.routers import (
     auth_router,
@@ -21,9 +20,6 @@ from backend.routers import (
     business_router,
     counter_router,
 )
-
-# Auto create database tables
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

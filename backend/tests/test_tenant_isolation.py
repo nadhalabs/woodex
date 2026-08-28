@@ -9,7 +9,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_db():
-    seed_database()
+    seed_database(confirm_destructive=True)
 
 def get_auth_headers(email: str):
     from backend.models import User

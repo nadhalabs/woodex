@@ -2,9 +2,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import Invoice, InvoiceItem, Order, Customer, Business
+from backend.models import Invoice, InvoiceItem, Order, Payment, Customer, Business
 from backend.schemas import InvoiceCreate, InvoiceResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 from backend.services.sequence_service import get_next_sequence_number
 
@@ -35,12 +35,29 @@ def get_invoices(
         res.append(inv_dict)
     return res
 
-@router.post("", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager_or_owner)])
 def create_invoice(
     req: InvoiceCreate,
     db: Session = Depends(get_db),
     business: Business = Depends(get_current_business)
 ):
+    order = None
+    if req.order_id:
+        order = db.query(Order).filter(
+            Order.id == req.order_id,
+            Order.business_id == business.id,
+        ).with_for_update().first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.customer_id != req.customer_id:
+            raise HTTPException(status_code=400, detail="Invoice customer must match order customer")
+        existing_invoice = db.query(Invoice).filter(
+            Invoice.business_id == business.id,
+            Invoice.order_id == order.id,
+        ).first()
+        if existing_invoice:
+            raise HTTPException(status_code=409, detail="Invoice already exists for this order")
+
     customer = db.query(Customer).filter(Customer.id == req.customer_id, Customer.business_id == business.id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -48,7 +65,16 @@ def create_invoice(
     subtotal = sum(item.quantity * item.unit_price for item in req.items)
     taxable = max(0.0, subtotal - req.discount)
     total_amount = round(taxable + req.tax_amount, 2)
-    balance_amount = max(0.0, round(total_amount - req.paid_amount, 2))
+    if req.paid_amount > total_amount:
+        raise HTTPException(status_code=400, detail="Paid amount cannot exceed invoice total")
+
+    paid_amount = req.paid_amount
+    if order:
+        paid_amount = min(
+            round(sum(payment.amount for payment in order.payments), 2),
+            total_amount,
+        )
+    balance_amount = max(0.0, round(total_amount - paid_amount, 2))
 
     invoice = Invoice(
         business_id=business.id,
@@ -73,7 +99,7 @@ def create_invoice(
         discount=req.discount,
         tax_amount=req.tax_amount,
         total_amount=total_amount,
-        paid_amount=req.paid_amount,
+        paid_amount=paid_amount,
         balance_amount=balance_amount,
         notes=req.notes
     )
@@ -120,7 +146,7 @@ def get_invoice(
         res.customer_name = invoice.customer.name
     return res
 
-@router.post("/from-order/{order_id}", response_model=InvoiceResponse)
+@router.post("/from-order/{order_id}", response_model=InvoiceResponse, dependencies=[Depends(require_manager_or_owner)])
 def create_invoice_from_order(
     order_id: str,
     db: Session = Depends(get_db),
@@ -129,7 +155,7 @@ def create_invoice_from_order(
     order = db.query(Order).filter(
         Order.id == order_id,
         Order.business_id == business.id
-    ).first()
+    ).with_for_update().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
@@ -140,7 +166,22 @@ def create_invoice_from_order(
             res.customer_name = existing_inv.customer.name
         return res
 
-    customer = db.query(Customer).filter(Customer.id == order.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == order.customer_id,
+        Customer.business_id == business.id,
+    ).first()
+    total_paid = round(sum(payment.amount for payment in order.payments), 2)
+    paid_amount = min(total_paid, order.total_amount)
+    balance_amount = max(0.0, round(order.total_amount - paid_amount, 2))
+
+    order.advance_amount = paid_amount
+    order.balance_amount = balance_amount
+    if order.total_amount > 0 and balance_amount == 0:
+        order.payment_status = "paid"
+    elif paid_amount > 0:
+        order.payment_status = "partially_paid"
+    else:
+        order.payment_status = "unpaid"
 
     invoice = Invoice(
         business_id=business.id,
@@ -167,8 +208,8 @@ def create_invoice_from_order(
         tax_amount=order.tax_amount,
         tax_inclusive=order.tax_inclusive if hasattr(order, 'tax_inclusive') else False,
         total_amount=order.total_amount,
-        paid_amount=order.advance_amount,
-        balance_amount=order.balance_amount,
+        paid_amount=paid_amount,
+        balance_amount=balance_amount,
         notes=f"Generated from Order {order.order_number}"
     )
     db.add(invoice)

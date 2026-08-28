@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { LogOut, Store, ChevronRight, User, Maximize2, Minimize2 } from 'lucide-react';
+import { LogOut, Store, User, Maximize2, Minimize2 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
 
 interface HeaderProps {
@@ -44,21 +44,6 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
     window.location.href = '/login';
   };
 
-  const handleSwitchStore = async (email: string) => {
-    try {
-      const res = await fetchApi('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password: 'password123' }),
-      });
-      if (res.access_token) {
-        localStorage.setItem('woodex_token', res.access_token);
-        window.location.href = '/dashboard';
-      }
-    } catch (err: any) {
-      alert(err.message || 'Store switch failed');
-    }
-  };
-
   return (
     <header className="bg-white border-b border-zinc-200 sticky top-0 z-30 px-6 sm:px-8 py-3.5 flex items-center justify-between shadow-2xs no-print">
       {/* Active Business Store Info */}
@@ -79,33 +64,8 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
         </div>
       </div>
 
-      {/* Demo Quick Store Switcher, Fullscreen Enlarge & User Profile */}
+      {/* Fullscreen Enlarge & User Profile */}
       <div className="flex items-center gap-3">
-        {/* Quick Demo Switcher dropdown / buttons */}
-        <div className="hidden lg:flex items-center gap-1.5 bg-zinc-100 p-1 rounded-xl border border-zinc-200">
-          <span className="text-xs font-semibold text-zinc-500 px-2 tracking-tight">Demo Stores:</span>
-          <button
-            onClick={() => handleSwitchStore('owner@oakwood.com')}
-            className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition cursor-pointer ${
-              businessName?.includes('Oakwood')
-                ? 'bg-black text-white shadow-xs'
-                : 'text-zinc-600 hover:text-black hover:bg-zinc-200/60'
-            }`}
-          >
-            Oakwood (Lite)
-          </button>
-          <button
-            onClick={() => handleSwitchStore('owner@timbercraft.com')}
-            className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition cursor-pointer ${
-              businessName?.includes('TimberCraft')
-                ? 'bg-black text-white shadow-xs'
-                : 'text-zinc-600 hover:text-black hover:bg-zinc-200/60'
-            }`}
-          >
-            TimberCraft (Standard)
-          </button>
-        </div>
-
         {/* Enlarge Screen / Fullscreen Button */}
         <button
           onClick={toggleFullscreen}

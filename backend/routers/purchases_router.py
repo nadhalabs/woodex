@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Purchase, PurchaseItem, Supplier, Product, Business, InventoryMovement
 from backend.schemas import PurchaseCreate, PurchaseResponse
-from backend.auth import get_current_business, require_standard_plan
+from backend.auth import get_current_business, require_standard_plan, require_manager_or_owner
 
-router = APIRouter(prefix="/purchases", tags=["Purchases (Standard)"])
+router = APIRouter(prefix="/purchases", tags=["Purchases (Standard)"], dependencies=[Depends(require_manager_or_owner)])
 
 def generate_purchase_number(db: Session, business_id: str) -> str:
     count = db.query(Purchase).filter(Purchase.business_id == business_id).count()

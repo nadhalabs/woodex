@@ -4,9 +4,13 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import User, Business
 from backend.schemas import UserCreateRequest, UserResponse
-from backend.auth import get_current_business, get_password_hash, require_standard_plan, require_role
+from backend.auth import get_current_user, get_password_hash, require_standard_plan, require_owner
 
-router = APIRouter(prefix="/staff", tags=["Staff & RBAC (Standard)"])
+router = APIRouter(
+    prefix="/staff",
+    tags=["Staff & RBAC (Standard)"],
+    dependencies=[Depends(require_owner)],
+)
 
 @router.get("", response_model=List[UserResponse])
 def get_staff_members(
@@ -20,22 +24,17 @@ def add_staff_member(
     req: UserCreateRequest,
     db: Session = Depends(get_db),
     business: Business = Depends(require_standard_plan),
-    current_user: User = Depends(require_role(["owner"]))
 ):
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
-
-    role = req.role.lower()
-    if role not in ["owner", "manager", "staff"]:
-        role = "staff"
 
     new_user = User(
         business_id=business.id,
         name=req.name,
         email=req.email,
         password_hash=get_password_hash(req.password),
-        role=role
+        role=req.role
     )
     db.add(new_user)
     db.commit()
@@ -47,7 +46,7 @@ def delete_staff_member(
     user_id: str,
     db: Session = Depends(get_db),
     business: Business = Depends(require_standard_plan),
-    current_user: User = Depends(require_role(["owner"]))
+    current_user: User = Depends(get_current_user),
 ):
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")

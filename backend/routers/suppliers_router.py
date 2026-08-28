@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Supplier, Business
 from backend.schemas import SupplierCreate, SupplierResponse
-from backend.auth import get_current_business, require_standard_plan
+from backend.auth import get_current_business, require_standard_plan, require_manager_or_owner
 
-router = APIRouter(prefix="/suppliers", tags=["Suppliers (Standard)"])
+router = APIRouter(prefix="/suppliers", tags=["Suppliers (Standard)"], dependencies=[Depends(require_manager_or_owner)])
 
 @router.get("", response_model=List[SupplierResponse])
 def get_suppliers(

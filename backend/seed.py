@@ -1,5 +1,11 @@
+import argparse
+import os
 import re
 from datetime import datetime, timedelta
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
+
+from backend.config import settings
 from backend.database import SessionLocal, engine, Base
 from backend.models import (
     Business, User, Customer, Category, Product, ProductImage, Quotation, QuotationItem,
@@ -47,9 +53,32 @@ def seed_categories_for_business(db, business_id):
     db.flush()
     return cat_map
 
-def seed_database():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+def _validate_destructive_seed_request(confirm_destructive: bool) -> str:
+    if settings.APP_ENV not in {"development", "test"}:
+        raise RuntimeError("Demo seeding is allowed only in development or test environments")
+    if not confirm_destructive or os.getenv("WOODEX_ALLOW_DESTRUCTIVE_SEED") != "true":
+        raise RuntimeError("Destructive demo seeding requires explicit confirmation")
+
+    database_name = (make_url(settings.DATABASE_URL).database or "").lower()
+    if not re.search(r"(^|[_-])(test|dev|demo)([_-]|$)", database_name):
+        raise RuntimeError("Refusing destructive seeding: database is not explicitly named as test, dev, or demo")
+
+    demo_password = os.getenv("WOODEX_DEMO_PASSWORD", "")
+    if len(demo_password) < 12:
+        raise RuntimeError("WOODEX_DEMO_PASSWORD must be explicitly set to at least 12 characters")
+    return demo_password
+
+
+def seed_database(*, confirm_destructive: bool = False):
+    demo_password = _validate_destructive_seed_request(confirm_destructive)
+    table_names = ", ".join(f'"{table.name}"' for table in reversed(Base.metadata.sorted_tables))
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+    except Exception as exc:
+        raise RuntimeError(
+            "Unable to reset demo data; run 'alembic upgrade head' on the dedicated database first"
+        ) from exc
     
     db = SessionLocal()
     try:
@@ -77,14 +106,14 @@ def seed_database():
             business_id=lite_biz.id,
             name="Ramesh Oakwood",
             email="owner@oakwood.com",
-            password_hash=get_password_hash("password123"),
+            password_hash=get_password_hash(demo_password),
             role="owner"
         )
         lite_staff = User(
             business_id=lite_biz.id,
             name="Suresh Kumar",
             email="staff@oakwood.com",
-            password_hash=get_password_hash("password123"),
+            password_hash=get_password_hash(demo_password),
             role="staff"
         )
         db.add_all([lite_owner, lite_staff])
@@ -300,9 +329,9 @@ def seed_database():
         db.add(std_biz)
         db.flush()
 
-        std_owner = User(business_id=std_biz.id, name="Vikramaditya Rao", email="owner@timbercraft.com", password_hash=get_password_hash("password123"), role="owner")
-        std_mgr = User(business_id=std_biz.id, name="Meera Nair", email="manager@timbercraft.com", password_hash=get_password_hash("password123"), role="manager")
-        std_sales = User(business_id=std_biz.id, name="Karan Singh", email="sales@timbercraft.com", password_hash=get_password_hash("password123"), role="staff")
+        std_owner = User(business_id=std_biz.id, name="Vikramaditya Rao", email="owner@timbercraft.com", password_hash=get_password_hash(demo_password), role="owner")
+        std_mgr = User(business_id=std_biz.id, name="Meera Nair", email="manager@timbercraft.com", password_hash=get_password_hash(demo_password), role="manager")
+        std_sales = User(business_id=std_biz.id, name="Karan Singh", email="sales@timbercraft.com", password_hash=get_password_hash(demo_password), role="staff")
         db.add_all([std_owner, std_mgr, std_sales])
         db.flush()
 
@@ -415,11 +444,12 @@ def seed_database():
         print("✅ Database successfully seeded with categories and product galleries!")
         print("--------------------------------------------------")
         print("1. OAKWOOD FURNITURE (WOODEX LITE):")
-        print("   Owner Login: owner@oakwood.com | Password: password123")
-        print("   Staff Login: staff@oakwood.com | Password: password123")
+        print("   Owner Login: owner@oakwood.com")
+        print("   Staff Login: staff@oakwood.com")
         print("2. TIMBERCRAFT SHOWROOM (WOODEX STANDARD):")
-        print("   Owner Login: owner@timbercraft.com | Password: password123")
-        print("   Manager Login: manager@timbercraft.com | Password: password123")
+        print("   Owner Login: owner@timbercraft.com")
+        print("   Manager Login: manager@timbercraft.com")
+        print("   All demo users use the password supplied via WOODEX_DEMO_PASSWORD.")
         print("--------------------------------------------------")
     except Exception as e:
         db.rollback()
@@ -429,4 +459,11 @@ def seed_database():
         db.close()
 
 if __name__ == "__main__":
-    seed_database()
+    parser = argparse.ArgumentParser(description="Explicitly reset and seed a disposable Woodex demo database")
+    parser.add_argument(
+        "--reset-demo-data",
+        action="store_true",
+        help="Confirm that the configured disposable database may be dropped and reseeded",
+    )
+    args = parser.parse_args()
+    seed_database(confirm_destructive=args.reset_demo_data)

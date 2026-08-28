@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Literal
 from pydantic import BaseModel, EmailStr, Field
+
+PaymentMethod = Literal["cash", "upi", "card", "bank_transfer", "other"]
 
 # Auth & Token
 class Token(BaseModel):
@@ -63,7 +65,7 @@ class UserCreateRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: str = "staff"  # "owner", "manager", "staff"
+    role: Literal["owner", "manager", "staff"] = "staff"
 
 # Customer
 class CustomerCreate(BaseModel):
@@ -283,7 +285,7 @@ class OrderCreate(BaseModel):
     custom_specs: Optional[Dict[str, Any]] = None  # dimensions, wood_type, color, fabric, finish, design_notes
     discount: float = 0.0
     tax_amount: float = 0.0
-    advance_amount: float = 0.0
+    advance_amount: float = Field(default=0.0, ge=0.0)
     delivery_address: Optional[str] = None
     delivery_notes: Optional[str] = None
     items: List[OrderItemBase]
@@ -329,8 +331,8 @@ class OrderResponse(BaseModel):
 # Payment
 class PaymentCreate(BaseModel):
     order_id: str
-    amount: float
-    payment_method: str = "cash"  # cash, upi, card, bank_transfer, other
+    amount: float = Field(gt=0)
+    payment_method: PaymentMethod = "cash"
     payment_date: str
     reference_number: Optional[str] = None
     notes: Optional[str] = None
@@ -362,7 +364,7 @@ class InvoiceCreate(BaseModel):
     gstin: Optional[str] = None
     discount: float = 0.0
     tax_amount: float = 0.0
-    paid_amount: float = 0.0
+    paid_amount: float = Field(default=0.0, ge=0.0)
     notes: Optional[str] = None
     items: List[InvoiceItemBase]
 
@@ -429,8 +431,8 @@ class CounterCheckoutRequest(BaseModel):
     discount_type: str = "fixed"  # "fixed" or "percentage"
     tax_rate: float = 18.0
     tax_inclusive: bool = False
-    paid_amount: float = 0.0
-    payment_method: str = "cash"  # "cash", "upi", "card", "bank_transfer", "other"
+    paid_amount: float = Field(default=0.0, ge=0.0)
+    payment_method: PaymentMethod = "cash"
     payment_reference: Optional[str] = None
     payment_notes: Optional[str] = None
     expected_delivery_date: Optional[str] = None

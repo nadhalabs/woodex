@@ -13,7 +13,7 @@ from backend.schemas import (
     CategoryResponse,
     CategoryReorderRequest,
 )
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
@@ -67,7 +67,7 @@ def get_categories(
     return results
 
 
-@router.post("", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager_or_owner)])
 def create_category(
     req: CategoryCreate,
     db: Session = Depends(get_db),
@@ -130,7 +130,7 @@ def create_category(
 
 
 # Static reorder route registered BEFORE dynamic /{category_id}
-@router.put("/order", status_code=status.HTTP_200_OK)
+@router.put("/order", status_code=status.HTTP_200_OK, dependencies=[Depends(require_manager_or_owner)])
 def reorder_categories(
     req: CategoryReorderRequest,
     db: Session = Depends(get_db),
@@ -206,7 +206,7 @@ def get_category(
     }
 
 
-@router.put("/{category_id}", response_model=CategoryResponse)
+@router.put("/{category_id}", response_model=CategoryResponse, dependencies=[Depends(require_manager_or_owner)])
 def update_category(
     category_id: str,
     req: CategoryUpdate,
@@ -292,7 +292,7 @@ def update_category(
     }
 
 
-@router.delete("/{category_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{category_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_manager_or_owner)])
 def delete_category(
     category_id: str,
     action: Optional[str] = Query(None, description="Action for existing products: 'move' or 'uncategorize'"),

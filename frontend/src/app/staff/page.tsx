@@ -16,7 +16,7 @@ export default function StaffPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState('staff');
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +50,7 @@ export default function StaffPage() {
       setIsAddModalOpen(false);
       setName('');
       setEmail('');
+      setPassword('');
       loadData();
     } catch (err: any) {
       alert(err.message || 'Failed to add staff member');

@@ -12,6 +12,7 @@ from backend.models import User, Business
 from backend.schemas import TokenData
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
+VALID_ROLES = frozenset({"owner", "manager", "staff"})
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -32,7 +33,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 def get_token_from_request(request: Request, token_header: Optional[str] = Depends(oauth2_scheme)) -> Optional[str]:
@@ -59,7 +60,7 @@ def get_current_user(
         raise credentials_exception
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -75,6 +76,11 @@ def get_current_user(
     user = db.query(User).filter(User.id == token_data.user_id).first()
     if user is None:
         raise credentials_exception
+    if user.role not in VALID_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
     return user
 
 def get_current_business(
@@ -89,15 +95,22 @@ def get_current_business(
         )
     return business
 
-def require_role(allowed_roles: list[str]):
+def require_roles(*allowed_roles: str):
+    if not allowed_roles or not set(allowed_roles).issubset(VALID_ROLES):
+        raise ValueError("Authorization dependencies must use valid Woodex roles")
+
     def role_checker(current_user: User = Depends(get_current_user)):
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission denied. Required role: {', '.join(allowed_roles)}"
+                detail="Insufficient permissions",
             )
         return current_user
     return role_checker
+
+
+require_owner = require_roles("owner")
+require_manager_or_owner = require_roles("owner", "manager")
 
 def require_standard_plan(business: Business = Depends(get_current_business)):
     if business.plan != "standard":

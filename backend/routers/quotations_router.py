@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Quotation, QuotationItem, Customer, Product, Order, OrderItem, Business, InventoryMovement
 from backend.schemas import QuotationCreate, QuotationStatusUpdate, QuotationResponse, OrderResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
 
@@ -38,7 +38,7 @@ def get_quotations(
         res.append(q_dict)
     return res
 
-@router.post("", response_model=QuotationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuotationResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager_or_owner)])
 def create_quotation(
     req: QuotationCreate,
     db: Session = Depends(get_db),
@@ -108,7 +108,7 @@ def get_quotation(
         res.customer_phone = customer.phone
     return res
 
-@router.put("/{quotation_id}/status", response_model=QuotationResponse)
+@router.put("/{quotation_id}/status", response_model=QuotationResponse, dependencies=[Depends(require_manager_or_owner)])
 def update_quotation_status(
     quotation_id: str,
     req: QuotationStatusUpdate,
@@ -118,9 +118,12 @@ def update_quotation_status(
     quotation = db.query(Quotation).filter(
         Quotation.id == quotation_id,
         Quotation.business_id == business.id
-    ).first()
+    ).with_for_update().first()
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if quotation.status == "converted":
+        raise HTTPException(status_code=409, detail="Converted quotation status cannot be changed")
 
     valid_statuses = ["draft", "sent", "accepted", "rejected"]
     if req.status.lower() not in valid_statuses:
@@ -137,7 +140,7 @@ def update_quotation_status(
         res.customer_phone = customer.phone
     return res
 
-@router.post("/{quotation_id}/convert-to-order", response_model=OrderResponse)
+@router.post("/{quotation_id}/convert-to-order", response_model=OrderResponse, dependencies=[Depends(require_manager_or_owner)])
 def convert_to_order(
     quotation_id: str,
     db: Session = Depends(get_db),
@@ -146,16 +149,45 @@ def convert_to_order(
     quotation = db.query(Quotation).filter(
         Quotation.id == quotation_id,
         Quotation.business_id == business.id
-    ).first()
+    ).with_for_update().first()
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if quotation.status == "converted":
+        raise HTTPException(status_code=409, detail="Quotation has already been converted")
 
     customer = db.query(Customer).filter(Customer.id == quotation.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    # Mark quotation accepted
-    quotation.status = "accepted"
+    requested_quantities = {}
+    for item in quotation.items:
+        if item.product_id:
+            requested_quantities[item.product_id] = requested_quantities.get(item.product_id, 0) + item.quantity
+
+    locked_products = []
+    if requested_quantities:
+        locked_products = (
+            db.query(Product)
+            .filter(
+                Product.business_id == business.id,
+                Product.id.in_(sorted(requested_quantities)),
+            )
+            .order_by(Product.id)
+            .with_for_update()
+            .all()
+        )
+    product_map = {product.id: product for product in locked_products}
+    for product_id in sorted(requested_quantities):
+        product = product_map.get(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        requested = requested_quantities[product_id]
+        if requested > product.current_stock and not business.allow_negative_stock:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for '{product.name}'. Requested: {requested}, Available: {product.current_stock}",
+            )
 
     order_num = generate_order_number(db, business.id)
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -194,10 +226,10 @@ def convert_to_order(
 
         # Deduct stock if product exists
         if item.product_id:
-            prod = db.query(Product).filter(Product.id == item.product_id, Product.business_id == business.id).first()
+            prod = product_map.get(item.product_id)
             if prod:
                 prev_stock = prod.current_stock
-                prod.current_stock = max(0, prod.current_stock - item.quantity)
+                prod.current_stock = prod.current_stock - item.quantity
                 if business.plan == "standard":
                     db.add(InventoryMovement(
                         business_id=business.id,
@@ -210,6 +242,8 @@ def convert_to_order(
                         notes=f"Order {order_num} from Quotation {quotation.quotation_number}"
                     ))
 
+    quotation.status = "converted"
+
     db.commit()
     db.refresh(order)
 
@@ -218,7 +252,7 @@ def convert_to_order(
     res.customer_phone = customer.phone
     return res
 
-@router.delete("/{quotation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{quotation_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager_or_owner)])
 def delete_quotation(
     quotation_id: str,
     db: Session = Depends(get_db),

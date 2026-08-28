@@ -13,7 +13,7 @@ from backend.schemas import (
     ProductImageResponse,
     ProductImageReorderRequest,
 )
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -79,7 +79,7 @@ def get_products(
     return products
 
 
-@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager_or_owner)])
 def create_product(
     req: ProductCreate,
     db: Session = Depends(get_db),
@@ -190,7 +190,7 @@ def get_product(
     return product
 
 
-@router.put("/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(require_manager_or_owner)])
 def update_product(
     product_id: str,
     req: ProductUpdate,
@@ -309,7 +309,7 @@ def update_product(
     return refreshed_product
 
 
-@router.post("/{product_id}/adjust-stock", response_model=ProductResponse)
+@router.post("/{product_id}/adjust-stock", response_model=ProductResponse, dependencies=[Depends(require_manager_or_owner)])
 def adjust_stock(
     product_id: str,
     req: StockAdjustmentRequest,
@@ -345,7 +345,7 @@ def adjust_stock(
     return product
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager_or_owner)])
 def delete_product(
     product_id: str,
     db: Session = Depends(get_db),
@@ -368,7 +368,7 @@ def delete_product(
 # ----------------------------------------------------
 
 # Static route for reordering before dynamic /{image_id}
-@router.put("/{product_id}/images/order", status_code=status.HTTP_200_OK)
+@router.put("/{product_id}/images/order", status_code=status.HTTP_200_OK, dependencies=[Depends(require_manager_or_owner)])
 def reorder_product_images(
     product_id: str,
     req: ProductImageReorderRequest,
@@ -418,7 +418,7 @@ def reorder_product_images(
     return {"message": "Images reordered successfully"}
 
 
-@router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager_or_owner)])
 def add_product_image(
     product_id: str,
     req: ProductImageCreate,
@@ -474,7 +474,7 @@ def add_product_image(
     return p_img
 
 
-@router.put("/{product_id}/images/{image_id}/primary", response_model=ProductImageResponse)
+@router.put("/{product_id}/images/{image_id}/primary", response_model=ProductImageResponse, dependencies=[Depends(require_manager_or_owner)])
 def set_primary_product_image(
     product_id: str,
     image_id: str,
@@ -513,7 +513,7 @@ def set_primary_product_image(
     return target_img
 
 
-@router.delete("/{product_id}/images/{image_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{product_id}/images/{image_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_manager_or_owner)])
 def delete_product_image(
     product_id: str,
     image_id: str,

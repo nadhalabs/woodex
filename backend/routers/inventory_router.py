@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import InventoryMovement, Product, Business
 from backend.schemas import InventoryMovementResponse
-from backend.auth import get_current_business, require_standard_plan
+from backend.auth import get_current_business, require_standard_plan, require_manager_or_owner
 
-router = APIRouter(prefix="/inventory", tags=["Inventory Movements (Standard)"])
+router = APIRouter(prefix="/inventory", tags=["Inventory Movements (Standard)"], dependencies=[Depends(require_manager_or_owner)])
 
 @router.get("/movements", response_model=List[InventoryMovementResponse])
 def get_inventory_movements(

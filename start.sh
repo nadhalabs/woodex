@@ -3,10 +3,8 @@ set -e
 
 echo "🚀 Starting WOODEX SaaS Platform..."
 
-# 1. Activate venv & seed database
+# 1. Activate the Python environment
 source venv/bin/activate
-echo "🌱 Checking database seed..."
-python -m backend.seed
 
 # 2. Start FastAPI Backend on port 8000
 echo "⚡ Starting FastAPI REST Backend on http://localhost:8000..."

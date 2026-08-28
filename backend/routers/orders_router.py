@@ -1,11 +1,17 @@
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import hashlib
+import json
+from fastapi import APIRouter, Depends, Header, HTTPException, status, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import Order, OrderItem, Customer, Product, Business, InventoryMovement
+from backend.models import (
+    Order, OrderItem, Customer, Product, Business, InventoryMovement,
+    Payment, CheckoutIdempotency,
+)
 from backend.schemas import OrderCreate, OrderStatusUpdate, OrderResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
 from backend.services.sequence_service import get_next_sequence_number
 
@@ -49,8 +55,30 @@ def get_orders(
 def create_order(
     req: OrderCreate,
     db: Session = Depends(get_db),
-    business: Business = Depends(get_current_business)
+    business: Business = Depends(get_current_business),
+    idempotency_key_header: Optional[str] = Header(None, alias="X-Idempotency-Key"),
 ):
+    idempotency_key = idempotency_key_header.strip() if idempotency_key_header else None
+    if idempotency_key:
+        namespaced_key = f"order:{idempotency_key}"
+    else:
+        request_json = json.dumps(req.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        request_fingerprint = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
+        time_bucket = int(datetime.utcnow().timestamp() // 300)
+        namespaced_key = f"order:auto:{time_bucket}:{request_fingerprint}"
+    if namespaced_key:
+        previous = db.query(CheckoutIdempotency).filter(
+            CheckoutIdempotency.business_id == business.id,
+            CheckoutIdempotency.idempotency_key == namespaced_key,
+        ).first()
+        if previous and previous.order_id:
+            existing_order = db.query(Order).filter(
+                Order.id == previous.order_id,
+                Order.business_id == business.id,
+            ).first()
+            if existing_order:
+                return existing_order
+
     customer = db.query(Customer).filter(Customer.id == req.customer_id, Customer.business_id == business.id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -58,7 +86,10 @@ def create_order(
     subtotal = sum(item.quantity * item.unit_price for item in req.items)
     taxable = max(0.0, subtotal - req.discount)
     total_amount = round(taxable + req.tax_amount, 2)
-    advance = min(req.advance_amount, total_amount)
+    if req.advance_amount > total_amount:
+        raise HTTPException(status_code=400, detail="Advance payment cannot exceed order total")
+
+    advance = round(req.advance_amount, 2)
     balance = max(0.0, round(total_amount - advance, 2))
 
     if advance >= total_amount and total_amount > 0:
@@ -67,6 +98,35 @@ def create_order(
         pay_status = "partially_paid"
     else:
         pay_status = "unpaid"
+
+    requested_quantities = {}
+    for item in req.items:
+        if item.product_id:
+            requested_quantities[item.product_id] = requested_quantities.get(item.product_id, 0) + item.quantity
+
+    locked_products = []
+    if requested_quantities:
+        locked_products = (
+            db.query(Product)
+            .filter(
+                Product.business_id == business.id,
+                Product.id.in_(sorted(requested_quantities)),
+            )
+            .order_by(Product.id)
+            .with_for_update()
+            .all()
+        )
+    product_map = {product.id: product for product in locked_products}
+    for product_id in sorted(requested_quantities):
+        product = product_map.get(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        requested = requested_quantities[product_id]
+        if requested > product.current_stock and not business.allow_negative_stock:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for '{product.name}'. Requested: {requested}, Available: {product.current_stock}",
+            )
 
     order_num = generate_order_number(db, business.id)
 
@@ -106,10 +166,10 @@ def create_order(
 
         # Deduct stock if product reference exists
         if item.product_id:
-            prod = db.query(Product).filter(Product.id == item.product_id, Product.business_id == business.id).first()
+            prod = product_map.get(item.product_id)
             if prod:
                 prev_stock = prod.current_stock
-                prod.current_stock = max(0, prod.current_stock - item.quantity)
+                prod.current_stock = prod.current_stock - item.quantity
                 if business.plan == "standard":
                     db.add(InventoryMovement(
                         business_id=business.id,
@@ -122,7 +182,42 @@ def create_order(
                         notes=f"Order {order_num}"
                     ))
 
-    db.commit()
+    if advance > 0:
+        db.add(Payment(
+            business_id=business.id,
+            order_id=order.id,
+            amount=advance,
+            payment_method="cash",
+            payment_date=req.order_date,
+            notes=f"Advance payment for order {order_num}",
+        ))
+
+    if namespaced_key:
+        db.add(CheckoutIdempotency(
+            business_id=business.id,
+            idempotency_key=namespaced_key,
+            order_id=order.id,
+            response_data={"order_id": order.id},
+        ))
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if not namespaced_key:
+            raise
+        previous = db.query(CheckoutIdempotency).filter(
+            CheckoutIdempotency.business_id == business.id,
+            CheckoutIdempotency.idempotency_key == namespaced_key,
+        ).first()
+        if not previous or not previous.order_id:
+            raise
+        order = db.query(Order).filter(
+            Order.id == previous.order_id,
+            Order.business_id == business.id,
+        ).first()
+        if not order:
+            raise
     db.refresh(order)
 
     res = OrderResponse.model_validate(order)
@@ -192,7 +287,7 @@ def update_order_status(
         res.customer_phone = customer.phone
     return res
 
-@router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager_or_owner)])
 def delete_order(
     order_id: str,
     db: Session = Depends(get_db),

@@ -6,9 +6,9 @@ from sqlalchemy import func
 from backend.database import get_db
 from backend.models import Order, Product, Payment, Expense, Customer, OrderItem, Business
 from backend.schemas import LiteDashboardResponse, StandardDashboardResponse, OrderResponse, ProductResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
-router = APIRouter(prefix="/reports", tags=["Reports & Analytics"])
+router = APIRouter(prefix="/reports", tags=["Reports & Analytics"], dependencies=[Depends(require_manager_or_owner)])
 
 @router.get("/dashboard", response_model=StandardDashboardResponse)
 def get_dashboard_data(

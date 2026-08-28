@@ -1,7 +1,10 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
+import hashlib
+import json
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import (
@@ -20,6 +23,28 @@ from backend.services.billing_calculator import calculate_counter_bill
 router = APIRouter(prefix="/counter", tags=["Counter & POS Billing"])
 
 
+def _checkout_fingerprint(req: CounterCheckoutRequest) -> str:
+    payload = req.model_dump(mode="json", exclude={"idempotency_key"})
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _replay_checkout(record: CheckoutIdempotency, fingerprint: str) -> CounterCheckoutResponse:
+    stored = record.response_data or {}
+    stored_fingerprint = stored.get("request_fingerprint")
+    if stored_fingerprint and stored_fingerprint != fingerprint:
+        raise HTTPException(status_code=409, detail="Idempotency key was already used for a different request")
+
+    if stored.get("state") == "completed":
+        return CounterCheckoutResponse.model_validate(stored["result"])
+
+    # Compatibility with successful records created before request fingerprints were stored.
+    if "order" in stored:
+        return CounterCheckoutResponse.model_validate(stored)
+
+    raise HTTPException(status_code=409, detail="Checkout with this idempotency key is still in progress")
+
+
 @router.post("/checkout", response_model=CounterCheckoutResponse, status_code=status.HTTP_201_CREATED)
 def counter_checkout(
     req: CounterCheckoutRequest,
@@ -32,7 +57,21 @@ def counter_checkout(
     Atomic Point-of-Sale / Front-Counter Checkout with authoritative Decimal financial calculations,
     idempotency duplicate protection, stock validation, and invoice snapshotting.
     """
-    idempotency_key = req.idempotency_key or idempotency_key_header
+    body_key = req.idempotency_key.strip() if req.idempotency_key is not None else None
+    header_key = idempotency_key_header.strip() if idempotency_key_header is not None else None
+    if req.idempotency_key is not None and not body_key:
+        raise HTTPException(status_code=400, detail="Idempotency key cannot be empty")
+    if idempotency_key_header is not None and not header_key:
+        raise HTTPException(status_code=400, detail="Idempotency key cannot be empty")
+    if body_key and header_key and body_key != header_key:
+        raise HTTPException(status_code=400, detail="Conflicting idempotency keys")
+
+    idempotency_key = body_key or header_key
+    if idempotency_key and len(idempotency_key) > 200:
+        raise HTTPException(status_code=400, detail="Idempotency key is too long")
+
+    fingerprint = _checkout_fingerprint(req) if idempotency_key else None
+    idempotency_record = None
     if idempotency_key:
         cached = (
             db.query(CheckoutIdempotency)
@@ -43,8 +82,30 @@ def counter_checkout(
             .first()
         )
         if cached:
-            # Return previously created transaction result directly
-            return cached.response_data
+            return _replay_checkout(cached, fingerprint)
+
+        idempotency_record = CheckoutIdempotency(
+            business_id=business.id,
+            idempotency_key=idempotency_key,
+            response_data={"state": "in_progress", "request_fingerprint": fingerprint},
+        )
+        db.add(idempotency_record)
+        try:
+            # The unique constraint serializes concurrent requests using the same key.
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+            cached = (
+                db.query(CheckoutIdempotency)
+                .filter(
+                    CheckoutIdempotency.business_id == business.id,
+                    CheckoutIdempotency.idempotency_key == idempotency_key,
+                )
+                .first()
+            )
+            if cached:
+                return _replay_checkout(cached, fingerprint)
+            raise
 
     # 1. Resolve or Create Customer
     customer = None
@@ -88,34 +149,46 @@ def counter_checkout(
     if not req.items or len(req.items) == 0:
         raise HTTPException(status_code=400, detail="Bill must contain at least one item")
 
-    product_map: Dict[str, Product] = {}
+    requested_quantities: Dict[str, int] = {}
     for item in req.items:
         if item.quantity <= 0:
             raise HTTPException(status_code=400, detail=f"Invalid quantity {item.quantity} for item '{item.product_name}'")
-
         if item.product_id:
-            prod = db.query(Product).filter(
-                Product.id == item.product_id,
-                Product.business_id == business.id
-            ).first()
-            if not prod:
-                raise HTTPException(status_code=404, detail=f"Product not found: {item.product_name}")
+            requested_quantities[item.product_id] = requested_quantities.get(item.product_id, 0) + item.quantity
 
-            # Check stock
-            if item.quantity > prod.current_stock and not business.allow_negative_stock:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Insufficient stock for '{prod.name}'. Requested: {item.quantity}, Available: {prod.current_stock}"
-                )
-            
-            # Staff price check: staff role cannot sell below configured selling price without permission
+    locked_products = []
+    if requested_quantities:
+        locked_products = (
+            db.query(Product)
+            .filter(
+                Product.business_id == business.id,
+                Product.id.in_(sorted(requested_quantities)),
+            )
+            .order_by(Product.id)
+            .with_for_update()
+            .all()
+        )
+    product_map: Dict[str, Product] = {product.id: product for product in locked_products}
+
+    for product_id in sorted(requested_quantities):
+        prod = product_map.get(product_id)
+        if not prod:
+            raise HTTPException(status_code=404, detail="Product not found")
+        requested = requested_quantities[product_id]
+        if requested > prod.current_stock and not business.allow_negative_stock:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for '{prod.name}'. Requested: {requested}, Available: {prod.current_stock}"
+            )
+
+    for item in req.items:
+        if item.product_id:
+            prod = product_map[item.product_id]
             if current_user.role == "staff" and item.unit_price < prod.selling_price:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Staff cannot override unit price below default selling price (₹{prod.selling_price}) for '{prod.name}'"
                 )
-
-            product_map[item.product_id] = prod
 
     # 3. Authoritative Financial Calculations via Decimal
     calc = calculate_counter_bill(
@@ -126,6 +199,8 @@ def counter_checkout(
         tax_inclusive=req.tax_inclusive if req.tax_inclusive is not None else bool(business.tax_inclusive),
         paid_amount=req.paid_amount
     )
+    if req.paid_amount > calc["total_amount"]:
+        raise HTTPException(status_code=400, detail="Paid amount cannot exceed order total")
 
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
     is_direct_sale = req.sale_type == "direct_sale"
@@ -181,8 +256,6 @@ def counter_checkout(
             prod = product_map[prod_id]
             prev_stock = prod.current_stock
             prod.current_stock = prod.current_stock - item_data["quantity"]
-            if not business.allow_negative_stock:
-                prod.current_stock = max(0, prod.current_stock)
 
             if business.plan == "standard":
                 db.add(InventoryMovement(
@@ -262,11 +335,7 @@ def counter_checkout(
         db.add(payment)
         db.flush()
 
-    db.commit()
-    db.refresh(order)
-    db.refresh(invoice)
-    if payment:
-        db.refresh(payment)
+    db.flush()
 
     # Prepare response
     order_res = OrderResponse.model_validate(order)
@@ -287,20 +356,17 @@ def counter_checkout(
         "customer": cust_res.model_dump(mode="json")
     }
 
-    # 8. Save Idempotency Key record
-    if idempotency_key:
-        try:
-            idemp = CheckoutIdempotency(
-                business_id=business.id,
-                idempotency_key=idempotency_key,
-                order_id=order.id,
-                invoice_id=invoice.id,
-                response_data=result_payload
-            )
-            db.add(idemp)
-            db.commit()
-        except Exception as e:
-            db.rollback()
+    # 8. Finalize the idempotency result in the same transaction as the sale.
+    if idempotency_record:
+        idempotency_record.order_id = order.id
+        idempotency_record.invoice_id = invoice.id
+        idempotency_record.response_data = {
+            "state": "completed",
+            "request_fingerprint": fingerprint,
+            "result": result_payload,
+        }
+
+    db.commit()
 
     return CounterCheckoutResponse(
         order=order_res,

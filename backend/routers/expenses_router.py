@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Expense, Business
 from backend.schemas import ExpenseCreate, ExpenseResponse
-from backend.auth import get_current_business
+from backend.auth import get_current_business, require_manager_or_owner
 
-router = APIRouter(prefix="/expenses", tags=["Expenses"])
+router = APIRouter(prefix="/expenses", tags=["Expenses"], dependencies=[Depends(require_manager_or_owner)])
 
 EXPENSE_CATEGORIES = ["Transport", "Labour", "Electricity", "Rent", "Maintenance", "Other"]
 
