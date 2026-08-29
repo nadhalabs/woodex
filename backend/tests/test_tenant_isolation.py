@@ -661,16 +661,25 @@ def test_tenant_isolation_expenses():
 
 
 def test_tenant_isolation_suppliers_and_purchases_across_standard_tenants():
-    # Register a second Standard tenant (Tenant C)
+    # Register a second tenant (Tenant C)
     reg_res = client.post("/api/v1/auth/register", json={
         "business_name": "Royal Woodcraft Co.",
         "owner_name": "Rajiv Mehra",
         "email": "owner@royalwoodcraft.com",
         "password": "WoodexTest123!",
-        "plan": "standard"
     })
     assert reg_res.status_code == 200
     headers_c = {"Authorization": f"Bearer {reg_res.json()['access_token']}"}
+
+    # Since all registrations default to Lite, upgrade Tenant C in DB to test standard features
+    db = SessionLocal()
+    try:
+        user_c = db.query(User).filter(User.email == "owner@royalwoodcraft.com").first()
+        biz_c = db.query(Business).filter(Business.id == user_c.business_id).first()
+        biz_c.plan = "standard"
+        db.commit()
+    finally:
+        db.close()
 
     headers_b = get_auth_headers("owner@timbercraft.com")
 
@@ -724,16 +733,24 @@ def test_tenant_isolation_suppliers_and_purchases_across_standard_tenants():
 
 
 def test_tenant_isolation_staff():
-    # Register another standard business to test staff isolation
+    # Register another business to test staff isolation
     reg_res = client.post("/api/v1/auth/register", json={
         "business_name": "Apex Carpentry",
         "owner_name": "Anil Kapoor",
         "email": "owner@apexcarpentry.com",
         "password": "WoodexTest123!",
-        "plan": "standard"
     })
     assert reg_res.status_code == 200
     headers_apex = {"Authorization": f"Bearer {reg_res.json()['access_token']}"}
+
+    db = SessionLocal()
+    try:
+        user_apex = db.query(User).filter(User.email == "owner@apexcarpentry.com").first()
+        biz_apex = db.query(Business).filter(Business.id == user_apex.business_id).first()
+        biz_apex.plan = "standard"
+        db.commit()
+    finally:
+        db.close()
 
     headers_tc = get_auth_headers("owner@timbercraft.com")
 
@@ -823,7 +840,6 @@ def test_tenant_isolation_auth_and_tokens():
         "owner_name": "Test Owner",
         "email": new_email,
         "password": "WoodexTest123!",
-        "plan": "lite"
     })
     assert res_reg.status_code == 200
     new_token = res_reg.json()["access_token"]

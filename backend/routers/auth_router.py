@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 import logging
+import re
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Business, User
@@ -9,37 +12,76 @@ from backend.auth import get_password_hash, verify_password, create_access_token
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger("woodex.auth")
 
+PASSWORD_REQUIREMENTS_MESSAGE = (
+    "Password must be at least 8 characters and include uppercase, lowercase, number, and symbol"
+)
+
+
+def password_is_strong(password: str) -> bool:
+    return (
+        len(password) >= 8
+        and bool(re.search(r"[A-Z]", password))
+        and bool(re.search(r"[a-z]", password))
+        and bool(re.search(r"\d", password))
+        and bool(re.search(r"[^A-Za-z0-9]", password))
+    )
+
 @router.post("/register", response_model=Token)
 def register_business(req: BusinessRegisterRequest, response: Response, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == req.email).first()
-    if existing_user:
+    business_email = str(req.business_email or req.email).strip().lower()
+    owner_email = str(req.owner_email or req.email).strip().lower()
+
+    duplicate_business = db.query(Business.id).filter(
+        func.lower(Business.email) == business_email
+    ).first()
+    duplicate_owner = db.query(User.id).filter(
+        func.lower(User.email) == owner_email
+    ).first()
+    if duplicate_business or duplicate_owner:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email address already exists"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Database conflict",
         )
-    
-    # Create Business
+
+    if req.plan is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Subscription plan cannot be selected during registration",
+        )
+
+    if not password_is_strong(req.password):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=PASSWORD_REQUIREMENTS_MESSAGE,
+        )
+
+    password_hash = get_password_hash(req.password)
     new_business = Business(
         name=req.business_name,
-        email=req.email,
+        email=business_email,
         phone=req.phone,
         address=req.address,
         gstin=req.gstin,
-        plan=req.plan
+        plan="lite",
     )
-    db.add(new_business)
-    db.flush()
-
-    # Create Owner User
-    owner_user = User(
-        business_id=new_business.id,
-        name=req.owner_name,
-        email=req.email,
-        password_hash=get_password_hash(req.password),
-        role="owner"
-    )
-    db.add(owner_user)
-    db.commit()
+    try:
+        db.add(new_business)
+        db.flush()
+        owner_user = User(
+            business_id=new_business.id,
+            name=req.owner_name,
+            email=owner_email,
+            password_hash=password_hash,
+            role="owner",
+        )
+        db.add(owner_user)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Database conflict",
+        ) from None
     db.refresh(owner_user)
 
     token = create_access_token({
