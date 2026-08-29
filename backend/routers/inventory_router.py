@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import InventoryMovement, Product, Business
@@ -18,12 +19,19 @@ def get_inventory_movements(
     if product_id:
         query = query.filter(InventoryMovement.product_id == product_id)
     
-    movements = query.order_by(InventoryMovement.created_at.desc()).all()
+    movements = (
+        query.outerjoin(
+            Product,
+            and_(Product.id == InventoryMovement.product_id, Product.business_id == business.id),
+        )
+        .with_entities(InventoryMovement, Product.name)
+        .order_by(InventoryMovement.created_at.desc())
+        .all()
+    )
     res = []
-    for m in movements:
-        prod = db.query(Product).filter(Product.id == m.product_id).first()
-        m_res = InventoryMovementResponse.model_validate(m)
-        if prod:
-            m_res.product_name = prod.name
+    for movement, product_name in movements:
+        m_res = InventoryMovementResponse.model_validate(movement)
+        if product_name:
+            m_res.product_name = product_name
         res.append(m_res)
     return res

@@ -4,6 +4,8 @@ import { showError } from './feedback';
 // The same-origin default is handled by Next/reverse-proxy rewrites.
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
 let activeRequests = 0;
+let currentUserToken: string | null = null;
+let currentUserRequest: Promise<any> | null = null;
 
 function updateRequestActivity(delta: number) {
   if (typeof window === 'undefined') return;
@@ -11,9 +13,7 @@ function updateRequestActivity(delta: number) {
   window.dispatchEvent(new CustomEvent('woodex:request-activity', { detail: activeRequests > 0 }));
 }
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('woodex_token') : null;
-  
+async function performRequest(endpoint: string, options: RequestInit, token: string | null) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -41,6 +41,8 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   }
 
   if (res.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    currentUserRequest = null;
+    currentUserToken = null;
     localStorage.removeItem('woodex_token');
     window.location.href = '/login';
     throw new Error('Unauthorized');
@@ -63,4 +65,31 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   }
 
   return res.json();
+}
+
+export function fetchApi(endpoint: string, options: RequestInit = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('woodex_token') : null;
+  const method = (options.method || 'GET').toUpperCase();
+
+  if (endpoint === '/auth/me' && method === 'GET') {
+    if (currentUserRequest && currentUserToken === token) {
+      return currentUserRequest;
+    }
+    currentUserToken = token;
+    currentUserRequest = performRequest(endpoint, options, token).catch((error) => {
+      currentUserRequest = null;
+      currentUserToken = null;
+      throw error;
+    });
+    return currentUserRequest;
+  }
+
+  const request = performRequest(endpoint, options, token);
+  if ((endpoint === '/business' && method !== 'GET') || endpoint === '/auth/logout') {
+    request.then(() => {
+      currentUserRequest = null;
+      currentUserToken = null;
+    }).catch(() => undefined);
+  }
+  return request;
 }

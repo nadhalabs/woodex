@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from backend.database import get_db
 from backend.models import Customer, Business, Invoice, Order, Quotation
 from backend.schemas import CustomerCreate, CustomerUpdate, CustomerResponse
@@ -24,15 +24,32 @@ def get_customers(
                 Customer.phone.ilike(search_pattern)
             )
         )
-    customers = query.order_by(Customer.created_at.desc()).all()
+    order_totals = (
+        db.query(
+            Order.customer_id.label("customer_id"),
+            func.sum(Order.balance_amount).label("pending_balance"),
+            func.count(Order.id).label("total_orders_count"),
+        )
+        .filter(Order.business_id == business.id)
+        .group_by(Order.customer_id)
+        .subquery()
+    )
+    customers = (
+        query.outerjoin(order_totals, order_totals.c.customer_id == Customer.id)
+        .with_entities(
+            Customer,
+            order_totals.c.pending_balance,
+            order_totals.c.total_orders_count,
+        )
+        .order_by(Customer.created_at.desc())
+        .all()
+    )
 
     result = []
-    for c in customers:
-        orders = db.query(Order).filter(Order.business_id == business.id, Order.customer_id == c.id).all()
-        pending_balance = sum(o.balance_amount for o in orders)
-        c_dict = CustomerResponse.model_validate(c)
-        c_dict.pending_balance = pending_balance
-        c_dict.total_orders_count = len(orders)
+    for customer, pending_balance, total_orders_count in customers:
+        c_dict = CustomerResponse.model_validate(customer)
+        c_dict.pending_balance = pending_balance or 0.0
+        c_dict.total_orders_count = total_orders_count or 0
         result.append(c_dict)
 
     return result
@@ -68,10 +85,13 @@ def get_customer(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    orders = db.query(Order).filter(Order.business_id == business.id, Order.customer_id == customer.id).all()
+    pending_balance, total_orders_count = db.query(
+        func.coalesce(func.sum(Order.balance_amount), 0.0),
+        func.count(Order.id),
+    ).filter(Order.business_id == business.id, Order.customer_id == customer.id).one()
     res = CustomerResponse.model_validate(customer)
-    res.pending_balance = sum(o.balance_amount for o in orders)
-    res.total_orders_count = len(orders)
+    res.pending_balance = pending_balance
+    res.total_orders_count = total_orders_count
     return res
 
 @router.put("/{customer_id}", response_model=CustomerResponse)

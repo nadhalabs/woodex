@@ -1,7 +1,8 @@
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import and_
+from sqlalchemy.orm import Session, selectinload
 from backend.database import get_db
 from backend.models import Quotation, QuotationItem, Customer, Product, Order, OrderItem, Business, InventoryMovement
 from backend.schemas import QuotationCreate, QuotationStatusUpdate, QuotationResponse, OrderResponse
@@ -27,14 +28,22 @@ def get_quotations(
     if status_filter:
         query = query.filter(Quotation.status == status_filter)
     
-    quotations = query.order_by(Quotation.created_at.desc()).all()
+    quotations = (
+        query.options(selectinload(Quotation.items))
+        .outerjoin(
+            Customer,
+            and_(Customer.id == Quotation.customer_id, Customer.business_id == business.id),
+        )
+        .with_entities(Quotation, Customer)
+        .order_by(Quotation.created_at.desc())
+        .all()
+    )
     res = []
-    for q in quotations:
-        c = db.query(Customer).filter(Customer.id == q.customer_id).first()
-        q_dict = QuotationResponse.model_validate(q)
-        if c:
-            q_dict.customer_name = c.name
-            q_dict.customer_phone = c.phone
+    for quotation, customer in quotations:
+        q_dict = QuotationResponse.model_validate(quotation)
+        if customer:
+            q_dict.customer_name = customer.name
+            q_dict.customer_phone = customer.phone
         res.append(q_dict)
     return res
 

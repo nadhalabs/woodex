@@ -4,7 +4,8 @@ import hashlib
 import json
 from fastapi import APIRouter, Depends, Header, HTTPException, status, Query
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy import and_
+from sqlalchemy.orm import Session, selectinload
 from backend.database import get_db
 from backend.models import (
     Order, OrderItem, Customer, Product, Business, InventoryMovement,
@@ -40,14 +41,22 @@ def get_orders(
     if customer_id:
         query = query.filter(Order.customer_id == customer_id)
 
-    orders = query.order_by(Order.created_at.desc()).all()
+    orders = (
+        query.options(selectinload(Order.items))
+        .outerjoin(
+            Customer,
+            and_(Customer.id == Order.customer_id, Customer.business_id == business.id),
+        )
+        .with_entities(Order, Customer)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
     res = []
-    for ord_obj in orders:
-        c = db.query(Customer).filter(Customer.id == ord_obj.customer_id).first()
+    for ord_obj, customer in orders:
         ord_dict = OrderResponse.model_validate(ord_obj)
-        if c:
-            ord_dict.customer_name = c.name
-            ord_dict.customer_phone = c.phone
+        if customer:
+            ord_dict.customer_name = customer.name
+            ord_dict.customer_phone = customer.phone
         res.append(ord_dict)
     return res
 

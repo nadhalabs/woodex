@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import and_
+from sqlalchemy.orm import Session, selectinload
 from backend.database import get_db
 from backend.models import Purchase, PurchaseItem, Supplier, Product, Business, InventoryMovement
 from backend.schemas import PurchaseCreate, PurchaseResponse
@@ -17,13 +18,23 @@ def get_purchases(
     db: Session = Depends(get_db),
     business: Business = Depends(require_standard_plan)
 ):
-    purchases = db.query(Purchase).filter(Purchase.business_id == business.id).order_by(Purchase.created_at.desc()).all()
+    purchases = (
+        db.query(Purchase)
+        .filter(Purchase.business_id == business.id)
+        .options(selectinload(Purchase.items))
+        .outerjoin(
+            Supplier,
+            and_(Supplier.id == Purchase.supplier_id, Supplier.business_id == business.id),
+        )
+        .with_entities(Purchase, Supplier)
+        .order_by(Purchase.created_at.desc())
+        .all()
+    )
     res = []
-    for p in purchases:
-        sup = db.query(Supplier).filter(Supplier.id == p.supplier_id).first()
-        p_res = PurchaseResponse.model_validate(p)
-        if sup:
-            p_res.supplier_name = sup.name
+    for purchase, supplier in purchases:
+        p_res = PurchaseResponse.model_validate(purchase)
+        if supplier:
+            p_res.supplier_name = supplier.name
         res.append(p_res)
     return res
 
