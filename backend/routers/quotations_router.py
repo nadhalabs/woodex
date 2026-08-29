@@ -7,6 +7,7 @@ from backend.database import get_db
 from backend.models import Quotation, QuotationItem, Customer, Product, Order, OrderItem, Business, InventoryMovement
 from backend.schemas import QuotationCreate, QuotationStatusUpdate, QuotationResponse, OrderResponse
 from backend.auth import get_current_business, require_manager_or_owner
+from backend.services.sequence_service import get_next_sequence_number
 
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
 
@@ -15,8 +16,7 @@ def generate_quotation_number(db: Session, business_id: str) -> str:
     return f"QT-{(count + 1):04d}"
 
 def generate_order_number(db: Session, business_id: str) -> str:
-    count = db.query(Order).filter(Order.business_id == business_id).count()
-    return f"ORD-{(count + 1):04d}"
+    return get_next_sequence_number(db, business_id, "order")
 
 @router.get("", response_model=List[QuotationResponse])
 def get_quotations(
@@ -121,7 +121,10 @@ def get_quotation(
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
 
-    customer = db.query(Customer).filter(Customer.id == quotation.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == quotation.customer_id,
+        Customer.business_id == business.id,
+    ).first()
     res = QuotationResponse.model_validate(quotation)
     if customer:
         res.customer_name = customer.name
@@ -152,7 +155,10 @@ def update_quotation_status(
     db.commit()
     db.refresh(quotation)
 
-    customer = db.query(Customer).filter(Customer.id == quotation.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == quotation.customer_id,
+        Customer.business_id == business.id,
+    ).first()
     res = QuotationResponse.model_validate(quotation)
     if customer:
         res.customer_name = customer.name
@@ -177,7 +183,10 @@ def convert_to_order(
     if quotation.status == "rejected":
         raise HTTPException(status_code=409, detail="Rejected quotation cannot be converted")
 
-    customer = db.query(Customer).filter(Customer.id == quotation.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == quotation.customer_id,
+        Customer.business_id == business.id,
+    ).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 

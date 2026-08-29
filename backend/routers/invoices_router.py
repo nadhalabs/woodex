@@ -30,7 +30,7 @@ def get_invoices(
     res = []
     for inv in invoices:
         inv_dict = InvoiceResponse.model_validate(inv)
-        if not inv_dict.customer_name and inv.customer:
+        if not inv_dict.customer_name and inv.customer and inv.customer.business_id == business.id:
             inv_dict.customer_name = inv.customer.name
         res.append(inv_dict)
     return res
@@ -174,7 +174,7 @@ def get_invoice(
         raise HTTPException(status_code=404, detail="Invoice not found")
 
     res = InvoiceResponse.model_validate(invoice)
-    if not res.customer_name and invoice.customer:
+    if not res.customer_name and invoice.customer and invoice.customer.business_id == business.id:
         res.customer_name = invoice.customer.name
     return res
 

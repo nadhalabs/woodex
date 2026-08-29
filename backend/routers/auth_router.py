@@ -116,11 +116,21 @@ def login(req: LoginRequest, response: Response, request: Request, db: Session =
         )
     
     business = db.query(Business).filter(Business.id == user.business_id).first()
+    if not business:
+        logger.warning(
+            "event=authentication_failed request_id=%s path=%s reason=business_not_found",
+            getattr(request.state, "request_id", "unavailable"),
+            request.url.path,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
     token = create_access_token({
         "sub": user.id,
         "business_id": user.business_id,
         "role": user.role,
-        "plan": business.plan if business else "lite"
+        "plan": business.plan
     })
 
     response.set_cookie(
