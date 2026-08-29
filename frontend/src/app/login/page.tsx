@@ -105,6 +105,14 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div className="mt-6 pt-5 border-t border-zinc-900 flex items-center justify-between text-xs font-semibold text-zinc-400">
+            <a href="/" className="hover:text-white transition">
+              ← Return Home
+            </a>
+            <a href="/faq" className="hover:text-white transition">
+              Store FAQ
+            </a>
+          </div>
         </div>
       </div>
     </div>
