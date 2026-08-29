@@ -253,7 +253,10 @@ def get_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    customer = db.query(Customer).filter(Customer.id == order.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == order.customer_id,
+        Customer.business_id == business.id,
+    ).first()
     res = OrderResponse.model_validate(order)
     if customer:
         res.customer_name = customer.name
@@ -298,7 +301,10 @@ def update_order_status(
     db.commit()
     db.refresh(order)
 
-    customer = db.query(Customer).filter(Customer.id == order.customer_id).first()
+    customer = db.query(Customer).filter(
+        Customer.id == order.customer_id,
+        Customer.business_id == business.id,
+    ).first()
     res = OrderResponse.model_validate(order)
     if customer:
         res.customer_name = customer.name

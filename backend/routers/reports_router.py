@@ -80,7 +80,10 @@ def get_dashboard_data(
 
     cost_of_goods_sold = db.query(
         func.coalesce(func.sum(OrderItem.quantity * Product.cost_price), 0.0)
-    ).join(Order, Order.id == OrderItem.order_id).join(
+    ).join(
+        Order,
+        and_(Order.id == OrderItem.order_id, Order.business_id == business.id),
+    ).join(
         Product,
         and_(Product.id == OrderItem.product_id, Product.business_id == business.id),
     ).filter(
@@ -95,7 +98,10 @@ def get_dashboard_data(
     if business.plan == "standard":
         top_selling_rows = (
             db.query(OrderItem.product_name, func.sum(OrderItem.quantity).label("quantity_sold"))
-            .join(Order, Order.id == OrderItem.order_id)
+            .join(
+                Order,
+                and_(Order.id == OrderItem.order_id, Order.business_id == business.id),
+            )
             .filter(Order.business_id == business.id)
             .group_by(OrderItem.product_name)
             .order_by(func.sum(OrderItem.quantity).desc())
