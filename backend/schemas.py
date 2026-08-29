@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List, Optional, Any, Dict, Literal
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 PaymentMethod = Literal["cash", "upi", "card", "bank_transfer", "other"]
 Plan = Literal["lite", "standard"]
@@ -36,12 +36,24 @@ class LoginRequest(BaseModel):
 class BusinessRegisterRequest(BaseModel):
     business_name: str = Field(min_length=1)
     owner_name: str = Field(min_length=1)
-    email: EmailStr
+    business_email: Optional[EmailStr] = None
+    owner_email: Optional[EmailStr] = None
+    email: Optional[EmailStr] = None
     password: str
     phone: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
-    plan: Plan = "lite"
+    plan: Optional[Plan] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def require_registration_emails(self):
+        if not self.business_email and not self.email:
+            raise ValueError("Business contact email is required")
+        if not self.owner_email and not self.email:
+            raise ValueError("Owner email is required")
+        return self
 
 # Business & User
 class BusinessResponse(BaseModel):
