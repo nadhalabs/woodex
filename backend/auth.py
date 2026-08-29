@@ -1,4 +1,5 @@
 import bcrypt
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
@@ -13,6 +14,16 @@ from backend.schemas import TokenData
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
 VALID_ROLES = frozenset({"owner", "manager", "staff"})
+logger = logging.getLogger("woodex.auth")
+
+
+def log_auth_failure(request: Request, reason: str) -> None:
+    logger.warning(
+        "event=authentication_failed request_id=%s path=%s reason=%s",
+        getattr(request.state, "request_id", "unavailable"),
+        request.url.path,
+        reason,
+    )
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -57,6 +68,7 @@ def get_current_user(
     
     token = get_token_from_request(request, token_header)
     if not token:
+        log_auth_failure(request, "missing_credentials")
         raise credentials_exception
 
     try:
@@ -71,12 +83,15 @@ def get_current_user(
             plan=payload.get("plan")
         )
     except JWTError:
+        log_auth_failure(request, "invalid_token")
         raise credentials_exception
 
     user = db.query(User).filter(User.id == token_data.user_id).first()
     if user is None:
+        log_auth_failure(request, "unknown_user")
         raise credentials_exception
     if user.role not in VALID_ROLES:
+        log_auth_failure(request, "invalid_role")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions",

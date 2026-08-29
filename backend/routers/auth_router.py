@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+import logging
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Business, User
@@ -6,6 +7,7 @@ from backend.schemas import LoginRequest, BusinessRegisterRequest, Token, UserRe
 from backend.auth import get_password_hash, verify_password, create_access_token, get_current_user, get_current_business
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+logger = logging.getLogger("woodex.auth")
 
 @router.post("/register", response_model=Token)
 def register_business(req: BusinessRegisterRequest, response: Response, db: Session = Depends(get_db)):
@@ -58,9 +60,14 @@ def register_business(req: BusinessRegisterRequest, response: Response, db: Sess
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login", response_model=Token)
-def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
+def login(req: LoginRequest, response: Response, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.password_hash):
+        logger.warning(
+            "event=authentication_failed request_id=%s path=%s reason=invalid_login",
+            getattr(request.state, "request_id", "unavailable"),
+            request.url.path,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"

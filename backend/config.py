@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # PostgreSQL connection string
-    DATABASE_URL: str = "postgresql://localhost/woodex_db"
+    DATABASE_URL: str
 
     @field_validator("SECRET_KEY")
     @classmethod
@@ -30,6 +30,13 @@ class Settings(BaseSettings):
 try:
     settings = Settings()
 except ValidationError as exc:
-    if any(error.get("loc") == ("SECRET_KEY",) for error in exc.errors()):
-        raise RuntimeError("SECRET_KEY must be set and contain at least 32 characters") from None
+    missing_or_invalid = {
+        error.get("loc", (None,))[0]
+        for error in exc.errors()
+        if error.get("loc")
+    }
+    required = missing_or_invalid.intersection({"APP_ENV", "SECRET_KEY", "DATABASE_URL"})
+    if required:
+        names = ", ".join(sorted(required))
+        raise RuntimeError(f"Missing or invalid required configuration: {names}") from None
     raise
