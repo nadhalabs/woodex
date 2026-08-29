@@ -34,7 +34,7 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -54,6 +54,7 @@ export default function InventoryPage() {
             <UpgradeBanner
               featureName="Advanced Inventory Movements & Audit Logs"
               description="Complete stock-in, stock-out, sale deduction, supplier intake, and manual inventory adjustment logs."
+              canUpgrade={me?.user?.role === 'owner'}
             />
           )}
 

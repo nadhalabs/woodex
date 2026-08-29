@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, Plus, Phone, MapPin, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
@@ -52,18 +53,20 @@ export default function SuppliersPage() {
       setName('');
       setPhone('');
       loadData();
+      showSuccess('Supplier created successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to create supplier');
+      showError(err, 'Failed to create supplier.');
     } finally {
       setSaving(false);
     }
   };
 
   const isStandard = me?.business?.plan === 'standard';
+  const canManageSuppliers = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -80,7 +83,7 @@ export default function SuppliersPage() {
               <p className="text-xs text-zinc-500">Manage timber mills, hardware vendors & material suppliers</p>
             </div>
 
-            {isStandard && (
+            {isStandard && canManageSuppliers && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
@@ -95,6 +98,7 @@ export default function SuppliersPage() {
             <UpgradeBanner
               featureName="Supplier Management"
               description="Keep track of timber mills, wood raw material suppliers, vendor GSTINs, and procurement history."
+              canUpgrade={me?.user?.role === 'owner'}
             />
           )}
 

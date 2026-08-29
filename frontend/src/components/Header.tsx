@@ -45,22 +45,22 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
   };
 
   return (
-    <header className="bg-white border-b border-zinc-200 sticky top-0 z-30 px-6 sm:px-8 py-3.5 flex items-center justify-between shadow-2xs no-print">
+    <header className="bg-white border-b border-zinc-200 sticky top-0 z-30 pl-16 pr-3 sm:px-8 py-3.5 flex items-center justify-between gap-2 shadow-2xs no-print">
       {/* Active Business Store Info */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
           <Store className="w-4 h-4" />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="font-extrabold text-zinc-950 text-base sm:text-lg leading-tight tracking-tight">{businessName || 'WOODEX Store'}</h2>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${
+            <h2 className="font-extrabold text-zinc-950 text-sm sm:text-lg leading-tight tracking-tight truncate">{businessName || 'WOODEX Store'}</h2>
+            <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${
               businessPlan === 'standard' ? 'bg-black text-white border border-zinc-800' : 'bg-zinc-100 text-zinc-900 border border-zinc-300'
             }`}>
               {businessPlan || 'lite'} Edition
             </span>
           </div>
-          <p className="text-[11px] text-zinc-400 font-medium">Multi-Tenant Isolated Business Space</p>
+          <p className="hidden sm:block text-[11px] text-zinc-400 font-medium">Multi-Tenant Isolated Business Space</p>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
         <button
           onClick={toggleFullscreen}
           title={isFullscreen ? 'Exit fullscreen mode' : 'Enlarge screen / Fullscreen mode'}
-          className="p-2 text-zinc-700 hover:text-black hover:bg-zinc-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold border border-zinc-200 shadow-2xs"
+          className="hidden sm:flex p-2 text-zinc-700 hover:text-black hover:bg-zinc-100 rounded-xl transition cursor-pointer items-center gap-1.5 text-xs font-semibold border border-zinc-200 shadow-2xs"
         >
           {isFullscreen ? (
             <>
@@ -86,7 +86,7 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
         </button>
 
         {/* User Card */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-zinc-200">
+        <div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-zinc-200">
           <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xs">
             <User className="w-4 h-4" />
           </div>

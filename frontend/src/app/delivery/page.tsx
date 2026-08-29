@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Calendar, MapPin, Phone, CheckCircle2, Clock } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -36,14 +37,15 @@ export default function DeliveryPage() {
         body: JSON.stringify({ delivery_status: newDeliveryStatus }),
       });
       loadData();
+      showSuccess('Delivery status updated.');
     } catch (err: any) {
-      alert(err.message || 'Delivery status update failed');
+      showError(err, 'Delivery status update failed.');
     }
   };
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header

@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ProductGalleryManager, GalleryImageItem } from '@/components/ProductGalleryManager';
@@ -58,6 +59,8 @@ export default function ProductsPage() {
   const [galleryImages, setGalleryImages] = useState<GalleryImageItem[]>([]);
   const [variants, setVariants] = useState<{ name: string; price: number }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [adjustingStock, setAdjustingStock] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   async function loadData() {
@@ -189,9 +192,10 @@ export default function ProductsPage() {
 
       setIsProductModalOpen(false);
       loadData();
+      showSuccess(editingProduct ? 'Product updated successfully.' : 'Product created successfully.');
     } catch (err: any) {
-      console.error('Failed to save product:', err);
       setFormError(err.message || 'Failed to save product');
+      showError(err, 'Failed to save product.');
     } finally {
       setSaving(false);
     }
@@ -200,6 +204,7 @@ export default function ProductsPage() {
   const handleStockAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adjustingProduct) return;
+    setAdjustingStock(true);
     try {
       await fetchApi(`/products/${adjustingProduct.id}/adjust-stock`, {
         method: 'POST',
@@ -210,19 +215,26 @@ export default function ProductsPage() {
       });
       setAdjustingProduct(null);
       loadData();
+      showSuccess('Stock updated successfully.');
     } catch (err: any) {
-      alert(err.message || 'Stock adjustment failed');
+      showError(err, 'Stock adjustment failed.');
+    } finally {
+      setAdjustingStock(false);
     }
   };
 
   const handleDeleteProduct = async () => {
     if (!deletingProduct) return;
+    setDeleting(true);
     try {
       await fetchApi(`/products/${deletingProduct.id}`, { method: 'DELETE' });
       setDeletingProduct(null);
       loadData();
+      showSuccess('Product deleted.');
     } catch (err: any) {
-      alert(err.message || 'Failed to delete product');
+      showError(err, 'Failed to delete product.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -232,10 +244,11 @@ export default function ProductsPage() {
   };
 
   const isStandard = me?.business?.plan === 'standard';
+  const canManageProducts = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -253,7 +266,7 @@ export default function ProductsPage() {
               <p className="text-xs text-zinc-500">Furniture, wood timber & bespoke craftsmanship inventory</p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {canManageProducts && <div className="flex items-center gap-3">
               <button
                 onClick={openAddModal}
                 className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
@@ -261,7 +274,7 @@ export default function ProductsPage() {
                 <PackagePlus className="w-4 h-4" />
                 <span>+ Add Product</span>
               </button>
-            </div>
+            </div>}
           </div>
 
           {/* Navigation Tabs */}
@@ -270,13 +283,13 @@ export default function ProductsPage() {
               <Package className="w-4 h-4" />
               <span>All Products ({products.length})</span>
             </div>
-            <Link
+            {canManageProducts && <Link
               href="/products/categories"
               className="pb-3 text-zinc-400 hover:text-black flex items-center gap-2 transition"
             >
               <Layers className="w-4 h-4" />
               <span>Categories ({categories.length})</span>
-            </Link>
+            </Link>}
           </div>
 
           {/* Filters & Search Bar */}
@@ -427,7 +440,7 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Bottom Actions */}
-                    <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2">
+                    {canManageProducts && <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2">
                       <button
                         onClick={() => {
                           setAdjustingProduct(p);
@@ -455,7 +468,7 @@ export default function ProductsPage() {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               );
@@ -823,9 +836,10 @@ export default function ProductsPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={adjustingStock}
                   className="w-1/2 py-2 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
                 >
-                  Update Stock
+                  {adjustingStock ? 'Updating...' : 'Update Stock'}
                 </button>
               </div>
             </form>
@@ -859,9 +873,10 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={handleDeleteProduct}
+                disabled={deleting}
                 className="w-1/2 py-2 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
               >
-                Delete
+                {deleting ? 'Deleting...' : 'Delete Product'}
               </button>
             </div>
           </div>

@@ -3,14 +3,16 @@
 import React from 'react';
 import { Sparkles, Check, ArrowRight } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 
 interface UpgradeBannerProps {
   featureName: string;
   description: string;
   onPlanUpgraded?: () => void;
+  canUpgrade?: boolean;
 }
 
-export function UpgradeBanner({ featureName, description, onPlanUpgraded }: UpgradeBannerProps) {
+export function UpgradeBanner({ featureName, description, onPlanUpgraded, canUpgrade = true }: UpgradeBannerProps) {
   const [upgrading, setUpgrading] = React.useState(false);
 
   const handleQuickUpgrade = async () => {
@@ -20,13 +22,14 @@ export function UpgradeBanner({ featureName, description, onPlanUpgraded }: Upgr
         method: 'PUT',
         body: JSON.stringify({ plan: 'standard' }),
       });
+      showSuccess('Woodex Standard is now active.');
       if (onPlanUpgraded) {
         onPlanUpgraded();
       } else {
         window.location.reload();
       }
     } catch (err: any) {
-      alert(err.message || 'Upgrade failed');
+      showError(err, 'Upgrade failed.');
     } finally {
       setUpgrading(false);
     }
@@ -72,7 +75,7 @@ export function UpgradeBanner({ featureName, description, onPlanUpgraded }: Upgr
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      {canUpgrade ? <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={handleQuickUpgrade}
           disabled={upgrading}
@@ -84,7 +87,9 @@ export function UpgradeBanner({ featureName, description, onPlanUpgraded }: Upgr
         <span className="text-zinc-500 text-xs font-medium">
           Instant 1-click toggle for testing. Switch back anytime in Settings.
         </span>
-      </div>
+      </div> : (
+        <p className="text-zinc-400 text-sm font-medium">Ask the business owner to change the subscription edition.</p>
+      )}
     </div>
   );
 }

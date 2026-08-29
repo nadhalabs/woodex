@@ -30,6 +30,16 @@
   background: #a1a1aa;
 }
 
+@media (max-width: 767px) {
+  main[class~="p-8"] {
+    padding: 1rem;
+  }
+
+  .fixed .grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media print {
   body {
     background: white !important;

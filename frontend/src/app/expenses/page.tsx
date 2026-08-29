@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { CreditCard, Plus, Trash2, Calendar, Tag, DollarSign, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 
@@ -20,6 +21,7 @@ export default function ExpensesPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -54,28 +56,34 @@ export default function ExpensesPage() {
       setAmount(0);
       setDescription('');
       loadData();
+      showSuccess('Expense recorded successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to record expense');
+      showError(err, 'Failed to record expense.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this expense entry?')) return;
+    if (!confirm('Delete this expense entry permanently? This cannot be undone.')) return;
+    setDeletingId(id);
     try {
       await fetchApi(`/expenses/${id}`, { method: 'DELETE' });
       loadData();
+      showSuccess('Expense deleted.');
     } catch (err: any) {
-      alert(err.message || 'Delete failed');
+      showError(err, 'Failed to delete expense.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const canManageExpenses = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -92,13 +100,13 @@ export default function ExpensesPage() {
               <p className="text-xs text-zinc-500">Log logistics, craftsmanship labour, facility rent & operational costs</p>
             </div>
 
-            <button
+            {canManageExpenses && <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Record New Expense</span>
-            </button>
+            </button>}
           </div>
 
           <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-zinc-200 shadow-2xs">
@@ -144,12 +152,16 @@ export default function ExpensesPage() {
                       <td className="px-6 py-4 font-black text-black">₹{e.amount?.toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4 text-xs text-zinc-600">{e.description || '-'}</td>
                       <td className="px-6 py-4 text-right">
+                        {canManageExpenses && (
                         <button
                           onClick={() => handleDeleteExpense(e.id)}
-                          className="p-1.5 text-zinc-400 hover:text-black rounded-lg hover:bg-zinc-100 transition"
+                          disabled={deletingId === e.id}
+                          aria-label={`Delete expense from ${e.date}`}
+                          className="p-1.5 text-zinc-400 hover:text-black rounded-lg hover:bg-zinc-100 transition disabled:opacity-40"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserCheck, UserPlus, Shield, Trash2, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
@@ -19,6 +20,7 @@ export default function StaffPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('staff');
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -52,10 +54,25 @@ export default function StaffPage() {
       setEmail('');
       setPassword('');
       loadData();
+      showSuccess('Staff member added successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to add staff member');
+      showError(err, 'Failed to add staff member.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteStaff = async (user: any) => {
+    if (!confirm(`Remove ${user.name} from this business? They will lose access immediately.`)) return;
+    setDeletingId(user.id);
+    try {
+      await fetchApi(`/staff/${user.id}`, { method: 'DELETE' });
+      await loadData();
+      showSuccess(`${user.name} was removed.`);
+    } catch (err) {
+      showError(err, 'Failed to remove staff member.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -63,7 +80,7 @@ export default function StaffPage() {
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -95,6 +112,7 @@ export default function StaffPage() {
             <UpgradeBanner
               featureName="Staff Management & Role-Based Access Control (RBAC)"
               description="Manage multiple store users with role-based permissions (Owner, Manager, Sales Staff)."
+              canUpgrade={me?.user?.role === 'owner'}
             />
           )}
 
@@ -123,13 +141,10 @@ export default function StaffPage() {
                         <td className="px-6 py-4 text-right">
                           {u.id !== me?.user?.id && me?.user?.role === 'owner' && (
                             <button
-                              onClick={async () => {
-                                if (confirm(`Remove ${u.name}?`)) {
-                                  await fetchApi(`/staff/${u.id}`, { method: 'DELETE' });
-                                  loadData();
-                                }
-                              }}
-                              className="p-1.5 text-zinc-400 hover:text-black transition rounded-lg hover:bg-zinc-100"
+                              onClick={() => handleDeleteStaff(u)}
+                              disabled={deletingId === u.id}
+                              aria-label={`Remove ${u.name}`}
+                              className="p-1.5 text-zinc-400 hover:text-black transition rounded-lg hover:bg-zinc-100 disabled:opacity-40"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -208,7 +223,7 @@ export default function StaffPage() {
                   className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-semibold text-black focus:outline-none focus:border-black"
                 >
                   <option value="manager">Manager (Orders, Billing, Products, Customers, Reports)</option>
-                  <option value="staff">Sales Staff (Customers, Quotations, Orders, Billing)</option>
+                  <option value="staff">Sales Staff (Customers, Orders, Counter)</option>
                   <option value="owner">Owner (Complete Access)</option>
                 </select>
               </div>

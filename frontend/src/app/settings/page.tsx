@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Save, Store, Receipt, Sliders } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -75,18 +76,19 @@ export default function SettingsPage() {
         body: JSON.stringify(payload),
       });
       setMe({ ...me, business: updated });
-      alert('✅ Store & Billing settings updated successfully!');
-      window.location.reload();
+      showSuccess('Store and billing settings updated successfully.');
     } catch (err: any) {
-      alert(err.message || 'Update failed');
+      showError(err, 'Settings update failed.');
     } finally {
       setSaving(false);
     }
   };
 
+  const canEditSettings = me?.user?.role === 'owner';
+
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -102,7 +104,14 @@ export default function SettingsPage() {
             <p className="text-xs text-zinc-500">Business details, Counter POS defaults, GST settings & WOODEX edition preferences</p>
           </div>
 
-          <form onSubmit={handleSave} className="space-y-6">
+          {!canEditSettings && (
+            <div className="rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700">
+              Settings are read-only. Only the business owner can make changes.
+            </div>
+          )}
+
+          <form onSubmit={handleSave}>
+            <fieldset disabled={!canEditSettings} className="space-y-6 disabled:opacity-70">
             {/* SECTION 1: BUSINESS STORE DETAILS */}
             <div className="bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs space-y-6">
               <div className="flex items-center justify-between pb-6 border-b border-zinc-100">
@@ -288,6 +297,7 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
+            </fieldset>
           </form>
         </main>
       </div>

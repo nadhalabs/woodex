@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FilePlus, ArrowRight, CheckCircle2, XCircle, Send, Clock, Plus, Trash2, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -23,6 +24,7 @@ export default function QuotationsPage() {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([{ product_id: '', product_name: '', quantity: 1, unit_price: 0 }]);
   const [saving, setSaving] = useState(false);
+  const [actionQuotationId, setActionQuotationId] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -45,6 +47,8 @@ export default function QuotationsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const canManageQuotations = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   const addItemRow = () => {
     setItems([...items, { product_id: '', product_name: '', quantity: 1, unit_price: 0 }]);
@@ -93,40 +97,50 @@ export default function QuotationsPage() {
       });
       setIsAddModalOpen(false);
       loadData();
+      showSuccess('Quotation created successfully.');
     } catch (err: any) {
-      alert(err.message || 'Quotation creation failed');
+      showError(err, 'Quotation creation failed.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleStatusUpdate = async (quotationId: string, newStatus: string) => {
+    if (actionQuotationId) return;
+    setActionQuotationId(quotationId);
     try {
       await fetchApi(`/quotations/${quotationId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
       loadData();
+      showSuccess('Quotation status updated.');
     } catch (err: any) {
-      alert(err.message || 'Status update failed');
+      showError(err, 'Status update failed.');
+    } finally {
+      setActionQuotationId(null);
     }
   };
 
   const handleConvertToOrder = async (quotationId: string) => {
+    if (actionQuotationId) return;
+    setActionQuotationId(quotationId);
     try {
       const order = await fetchApi(`/quotations/${quotationId}/convert-to-order`, {
         method: 'POST',
       });
-      alert(`🎉 Quotation converted into Order ${order.order_number}!`);
+      showSuccess(`Quotation converted into Order ${order.order_number}.`);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Conversion failed');
+      showError(err, 'Quotation conversion failed.');
+    } finally {
+      setActionQuotationId(null);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -143,13 +157,13 @@ export default function QuotationsPage() {
               <p className="text-xs text-zinc-500">Draft, present, accept & convert estimates to furniture orders</p>
             </div>
 
-            <button
+            {canManageQuotations && <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
             >
               <FilePlus className="w-4 h-4" />
               <span>Create New Quotation</span>
-            </button>
+            </button>}
           </div>
 
           {/* Quotations List */}
@@ -184,10 +198,11 @@ export default function QuotationsPage() {
                         {q.validity_date || 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        {canManageQuotations && <div className="flex items-center justify-end gap-2">
                           {q.status === 'draft' && (
                             <button
                               onClick={() => handleStatusUpdate(q.id, 'sent')}
+                              disabled={actionQuotationId === q.id}
                               className="text-xs font-bold uppercase tracking-wider bg-zinc-100 text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg transition"
                             >
                               Mark Sent
@@ -197,12 +212,14 @@ export default function QuotationsPage() {
                             <>
                               <button
                                 onClick={() => handleStatusUpdate(q.id, 'accepted')}
+                                disabled={actionQuotationId === q.id}
                                 className="text-xs font-bold uppercase tracking-wider bg-black text-white hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition"
                               >
                                 Accept
                               </button>
                               <button
                                 onClick={() => handleStatusUpdate(q.id, 'rejected')}
+                                disabled={actionQuotationId === q.id}
                                 className="text-xs font-bold uppercase tracking-wider bg-zinc-100 text-zinc-600 hover:bg-zinc-200 px-2.5 py-1.5 rounded-lg transition"
                               >
                                 Reject
@@ -212,13 +229,14 @@ export default function QuotationsPage() {
                           {(q.status === 'accepted' || q.status === 'sent') && (
                             <button
                               onClick={() => handleConvertToOrder(q.id)}
+                              disabled={actionQuotationId === q.id}
                               className="inline-flex items-center gap-1.5 bg-black hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
                             >
                               <span>Convert to Order</span>
                               <ArrowRight className="w-3.5 h-3.5" />
                             </button>
                           )}
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))}
@@ -226,7 +244,7 @@ export default function QuotationsPage() {
                   {quotations.length === 0 && !loading && (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-zinc-400 font-medium">
-                        No quotations created yet. Click "Create New Quotation" to start.
+                        No quotations found.
                       </td>
                     </tr>
                   )}

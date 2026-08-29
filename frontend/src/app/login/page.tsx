@@ -23,9 +23,11 @@ export default function LoginPage() {
       });
       if (data.access_token) {
         localStorage.setItem('woodex_token', data.access_token);
-        router.push('/dashboard');
+        const me = await fetchApi('/auth/me');
+        router.push(me?.user?.role === 'staff' ? '/counter' : '/dashboard');
       }
     } catch (err: any) {
+      localStorage.removeItem('woodex_token');
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);

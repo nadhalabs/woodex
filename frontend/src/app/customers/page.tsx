@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { Search, UserPlus, Phone, MapPin, FileText, ShoppingBag, CreditCard, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 export default function CustomersPage() {
   const [me, setMe] = useState<any>(null);
@@ -19,6 +21,7 @@ export default function CustomersPage() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  useEscapeKey(isAddModalOpen && !saving, () => setIsAddModalOpen(false));
 
   async function loadCustomers() {
     try {
@@ -52,8 +55,9 @@ export default function CustomersPage() {
       setNotes('');
       setIsAddModalOpen(false);
       loadCustomers();
+      showSuccess('Customer added successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to add customer');
+      showError(err, 'Failed to add customer.');
     } finally {
       setSaving(false);
     }
@@ -61,7 +65,7 @@ export default function CustomersPage() {
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -162,9 +166,9 @@ export default function CustomersPage() {
       {/* Add Customer Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div role="dialog" aria-modal="true" aria-labelledby="add-customer-title" className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
-              <h3 className="font-black text-lg text-black uppercase tracking-tight">Add New Customer</h3>
+              <h3 id="add-customer-title" className="font-black text-lg text-black uppercase tracking-tight">Add New Customer</h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
@@ -177,6 +181,7 @@ export default function CustomersPage() {
                 </label>
                 <input
                   type="text"
+                  autoFocus
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}

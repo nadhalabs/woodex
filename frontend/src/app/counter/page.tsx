@@ -34,6 +34,7 @@ import {
   Keyboard,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { QuickCustomerModal } from '@/components/QuickCustomerModal';
@@ -108,6 +109,7 @@ export default function CounterPage() {
 
   // Processing & Errors
   const [checkingOut, setCheckingOut] = useState(false);
+  const [holdingBill, setHoldingBill] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // References
@@ -176,7 +178,7 @@ export default function CounterPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cartItems, selectedCustomer, paidAmount, billDiscount, taxRate, taxInclusive]);
+  }, [cartItems, selectedCustomer, paidAmount, billDiscount, taxRate, taxInclusive, checkingOut]);
 
   // Real-time calculations for frontend preview
   const rawSubtotal = cartItems.reduce((acc, item) => {
@@ -255,7 +257,7 @@ export default function CounterPage() {
   const updateCartPrice = (index: number, newPrice: number) => {
     // Only owner/manager can edit price or check
     if (me?.user?.role === 'staff' && newPrice < cartItems[index].default_price) {
-      alert(`Staff cannot reduce unit price below standard selling price (₹${cartItems[index].default_price})`);
+      showError(`Staff cannot reduce unit price below standard selling price (₹${cartItems[index].default_price}).`);
       return;
     }
     setCartItems((prev) => {
@@ -293,9 +295,11 @@ export default function CounterPage() {
   // Hold Bill
   const handleHoldBill = async () => {
     if (cartItems.length === 0) {
-      alert('Cart is empty. Nothing to hold.');
+      showError('Cart is empty. Add a product before holding the bill.');
       return;
     }
+    if (holdingBill) return;
+    setHoldingBill(true);
 
     const label = selectedCustomer
       ? `${selectedCustomer.name} (${cartItems.length} items)`
@@ -324,9 +328,11 @@ export default function CounterPage() {
       });
       setHeldBills((prev) => [res, ...prev]);
       resetBill();
-      alert('Bill held successfully.');
+      showSuccess('Bill held successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to hold bill');
+      showError(err, 'Failed to hold bill.');
+    } finally {
+      setHoldingBill(false);
     }
   };
 
@@ -367,6 +373,7 @@ export default function CounterPage() {
 
   // Complete Checkout
   const handleCheckout = async (autoPrint: boolean = false) => {
+    if (checkingOut) return;
     if (cartItems.length === 0) {
       setCheckoutError('Please add at least one product to the bill.');
       return;
@@ -432,11 +439,11 @@ export default function CounterPage() {
       if (autoPrint) {
         setIsPrintModalOpen(true);
       } else {
-        alert(`Sale completed successfully! Invoice #${res.invoice?.invoice_number || res.order?.order_number}`);
+        showSuccess(`Sale completed successfully. Invoice #${res.invoice?.invoice_number || res.order?.order_number}.`);
       }
     } catch (err: any) {
-      console.error('Checkout failed:', err);
       setCheckoutError(err.message || 'Checkout failed. Please check stock and details.');
+      showError(err, 'Checkout failed. Please check stock and details.');
     } finally {
       setCheckingOut(false);
     }
@@ -462,10 +469,10 @@ export default function CounterPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#fbfbfb] flex overflow-hidden">
-      <Sidebar businessPlan={me?.business?.plan} />
+    <div className="min-h-screen bg-[#fbfbfb] flex md:overflow-hidden">
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-hidden">
         <Header
           userName={me?.user?.name}
           userRole={me?.user?.role}
@@ -474,12 +481,12 @@ export default function CounterPage() {
         />
 
         {/* Counter Operational Screen */}
-        <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <main className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
           {/* LEFT COLUMN: PRODUCT SELECTION & CATALOGUE */}
-          <div className="flex-1 flex flex-col bg-[#fbfbfb] border-r border-zinc-200 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-[#fbfbfb] border-r border-zinc-200 overflow-hidden min-h-[65vh] md:min-h-0">
             {/* Top Toolbar: Search & Shortcuts Guide */}
             <div className="p-4 bg-white border-b border-zinc-200 space-y-3 shrink-0">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
                   <input
@@ -500,7 +507,7 @@ export default function CounterPage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-2 sm:flex items-center gap-2">
                   <button
                     onClick={() => setIsOrderLookupOpen(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer uppercase tracking-wider"
@@ -648,7 +655,7 @@ export default function CounterPage() {
           </div>
 
           {/* RIGHT COLUMN: CURRENT BILL & CHECKOUT PANEL */}
-          <div className="w-full md:w-[480px] lg:w-[520px] bg-white flex flex-col h-full overflow-hidden border-l border-zinc-200 shadow-xl">
+          <div className="w-full md:w-[480px] lg:w-[520px] bg-white flex flex-col min-h-screen md:min-h-0 md:h-full overflow-hidden border-l border-zinc-200 shadow-xl">
             {/* Header: Customer Selection Bar */}
             <div className="p-4 bg-black text-white border-b border-zinc-800 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
@@ -665,10 +672,11 @@ export default function CounterPage() {
                   </button>
                   <button
                     onClick={handleHoldBill}
-                    className="text-[11px] font-bold text-white px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
+                    disabled={holdingBill}
+                    className="text-[11px] font-bold text-white px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
                   >
                     <PauseCircle className="w-3.5 h-3.5" />
-                    <span>Hold</span>
+                    <span>{holdingBill ? 'Holding...' : 'Hold'}</span>
                   </button>
                 </div>
               </div>

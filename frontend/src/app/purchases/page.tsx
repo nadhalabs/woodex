@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShoppingBag, Plus, Building2, Package, X } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
@@ -68,18 +69,20 @@ export default function PurchasesPage() {
       });
       setIsAddModalOpen(false);
       loadData();
+      showSuccess('Purchase recorded successfully.');
     } catch (err: any) {
-      alert(err.message || 'Purchase creation failed');
+      showError(err, 'Purchase creation failed.');
     } finally {
       setSaving(false);
     }
   };
 
   const isStandard = me?.business?.plan === 'standard';
+  const canManagePurchases = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -96,7 +99,7 @@ export default function PurchasesPage() {
               <p className="text-xs text-zinc-500">Record material purchases & auto-increment received inventory</p>
             </div>
 
-            {isStandard && (
+            {isStandard && canManagePurchases && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
@@ -111,6 +114,7 @@ export default function PurchasesPage() {
             <UpgradeBanner
               featureName="Purchase Order Management"
               description="Create vendor purchase orders, track raw timber procurement costs, and auto-increment stock upon delivery."
+              canUpgrade={me?.user?.role === 'owner'}
             />
           )}
 

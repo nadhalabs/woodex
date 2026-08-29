@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { FeedbackProvider } from '@/components/FeedbackProvider';
 
 export const metadata: Metadata = {
   title: 'WOODEX — Simple Business Software for Furniture & Wood Stores',
@@ -13,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><FeedbackProvider>{children}</FeedbackProvider></body>
     </html>
   );
 }

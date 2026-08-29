@@ -18,6 +18,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ImageUploadDropzone } from '@/components/ImageUploadDropzone';
@@ -125,9 +126,10 @@ export default function CategoriesPage() {
         setIsAddModalOpen(false);
       }
       loadData();
+      showSuccess(editingCategory ? 'Category updated successfully.' : 'Category created successfully.');
     } catch (err: any) {
-      console.error('Save failed:', err);
       setFormError(err.message || 'Failed to save category.');
+      showError(err, 'Failed to save category.');
     } finally {
       setFormSaving(false);
     }
@@ -169,9 +171,10 @@ export default function CategoriesPage() {
       await fetchApi(url, { method: 'DELETE' });
       setDeletingCategory(null);
       loadData();
+      showSuccess('Category deleted.');
     } catch (err: any) {
-      console.error('Delete failed:', err);
       setDeleteError(err.message || 'Failed to delete category.');
+      showError(err, 'Failed to delete category.');
     } finally {
       setDeleteSubmitting(false);
     }
@@ -201,7 +204,7 @@ export default function CategoriesPage() {
         body: JSON.stringify({ items }),
       });
     } catch (err) {
-      console.error('Failed to reorder categories:', err);
+      showError(err, 'Failed to reorder categories.');
       loadData();
     }
   };
@@ -213,10 +216,11 @@ export default function CategoriesPage() {
   });
 
   const otherCategories = categories.filter((c) => c.id !== deletingCategory?.id);
+  const canManageCategories = me?.user?.role === 'owner' || me?.user?.role === 'manager';
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -234,7 +238,7 @@ export default function CategoriesPage() {
               <p className="text-xs text-zinc-500">Configure catalogue categories, covers, and item collections</p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {canManageCategories && <div className="flex items-center gap-3">
               <button
                 onClick={openAddModal}
                 className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
@@ -242,7 +246,7 @@ export default function CategoriesPage() {
                 <Plus className="w-4 h-4" />
                 <span>+ Add Category</span>
               </button>
-            </div>
+            </div>}
           </div>
 
           {/* Navigation Tabs */}
@@ -297,7 +301,7 @@ export default function CategoriesPage() {
                     <tr key={cat.id} className="hover:bg-zinc-50/80 transition">
                       {/* Reorder Arrows */}
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                        {canManageCategories ? <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
                             disabled={idx === 0}
@@ -317,7 +321,7 @@ export default function CategoriesPage() {
                           >
                             <ArrowDown className="w-3.5 h-3.5" />
                           </button>
-                        </div>
+                        </div> : <span className="text-xs font-bold text-black">{idx + 1}</span>}
                       </td>
 
                       {/* Photo */}
@@ -374,7 +378,7 @@ export default function CategoriesPage() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        {canManageCategories && <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openEditModal(cat)}
                             className="p-1.5 text-zinc-600 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
@@ -389,7 +393,7 @@ export default function CategoriesPage() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))}

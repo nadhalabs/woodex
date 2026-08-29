@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShoppingBag, Plus, Sparkles, ChevronRight, CreditCard, Receipt, Truck, Eye, X, Check, Trash2 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -48,6 +49,7 @@ export default function OrdersPage() {
   const [designNotes, setDesignNotes] = useState('');
 
   const [saving, setSaving] = useState(false);
+  const [actionOrderId, setActionOrderId] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -120,27 +122,33 @@ export default function OrdersPage() {
       });
       setIsAddModalOpen(false);
       loadData();
+      showSuccess('Order created successfully.');
     } catch (err: any) {
-      alert(err.message || 'Order creation failed');
+      showError(err, 'Order creation failed.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleStatusAdvance = async (orderId: string, currentStatus: string) => {
+    if (actionOrderId) return;
     const sequence = ['new', 'confirmed', 'in_progress', 'ready', 'out_for_delivery', 'delivered'];
     const idx = sequence.indexOf(currentStatus);
     if (idx === -1 || idx === sequence.length - 1) return;
     const nextStatus = sequence[idx + 1];
 
+    setActionOrderId(orderId);
     try {
       await fetchApi(`/orders/${orderId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ order_status: nextStatus }),
       });
       loadData();
+      showSuccess('Order status updated.');
     } catch (err: any) {
-      alert(err.message || 'Status transition failed');
+      showError(err, 'Status transition failed.');
+    } finally {
+      setActionOrderId(null);
     }
   };
 
@@ -161,25 +169,31 @@ export default function OrdersPage() {
       });
       setPayingOrder(null);
       loadData();
+      showSuccess('Payment recorded successfully.');
     } catch (err: any) {
-      alert(err.message || 'Payment recording failed');
+      showError(err, 'Payment recording failed.');
     } finally {
       setSubmittingPayment(false);
     }
   };
 
   const handleGenerateInvoice = async (orderId: string) => {
+    if (actionOrderId) return;
+    setActionOrderId(orderId);
     try {
       const inv = await fetchApi(`/invoices/from-order/${orderId}`, { method: 'POST' });
       setActiveInvoice(inv);
+      showSuccess('Invoice generated successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to generate invoice');
+      showError(err, 'Failed to generate invoice.');
+    } finally {
+      setActionOrderId(null);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#fbfbfb] flex">
-      <Sidebar businessPlan={me?.business?.plan} />
+      <Sidebar businessPlan={me?.business?.plan} userRole={me?.user?.role} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -258,6 +272,7 @@ export default function OrdersPage() {
                     {ord.order_status !== 'delivered' && (
                       <button
                         onClick={() => handleStatusAdvance(ord.id, ord.order_status)}
+                        disabled={actionOrderId === ord.id}
                         className="inline-flex items-center justify-center gap-1.5 bg-black hover:bg-zinc-800 text-white font-extrabold text-xs uppercase tracking-wider px-3.5 py-2 rounded-xl transition cursor-pointer"
                       >
                         <span>Next Lifecycle</span>
@@ -283,6 +298,7 @@ export default function OrdersPage() {
                     {/* Invoice Button */}
                     <button
                       onClick={() => handleGenerateInvoice(ord.id)}
+                      disabled={actionOrderId === ord.id}
                       className="inline-flex items-center justify-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-xl transition border border-zinc-200 cursor-pointer"
                     >
                       <Receipt className="w-3.5 h-3.5 text-black" />

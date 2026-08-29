@@ -22,26 +22,33 @@ import {
   Store,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
+  X,
 } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 
 interface SidebarProps {
   businessPlan?: string;
+  userRole?: string;
 }
 
-export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
+export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarProps) {
   const pathname = usePathname();
   const isStandard = businessPlan === 'standard';
   const [collapsed, setCollapsed] = useState<boolean>(false);
-  const [mounted, setMounted] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const showLabels = mobileOpen || !collapsed;
 
   useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem('woodex_sidebar_collapsed');
     if (stored !== null) {
       setCollapsed(stored === 'true');
     }
   }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -50,7 +57,7 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
   };
 
   const mainNav = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, managementOnly: true },
     { name: 'Counter', href: '/counter', icon: Store, highlight: true },
     { name: 'Orders', href: '/orders', icon: ShoppingBag },
     { name: 'Billing', href: '/invoices', icon: Receipt },
@@ -59,30 +66,49 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Payments', href: '/payments', icon: CreditCard },
     { name: 'Delivery', href: '/delivery', icon: Truck },
-    { name: 'Expenses', href: '/expenses', icon: CreditCard },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
-  ];
+    { name: 'Expenses', href: '/expenses', icon: CreditCard, managementOnly: true },
+    { name: 'Reports', href: '/reports', icon: BarChart3, managementOnly: true },
+  ].filter((item) => !item.managementOnly || userRole === 'owner' || userRole === 'manager');
 
   const standardNav = [
     { name: 'Purchases', href: '/purchases', icon: ShoppingBag, standardOnly: true },
     { name: 'Suppliers', href: '/suppliers', icon: Building2, standardOnly: true },
     { name: 'Inventory', href: '/inventory', icon: Boxes, standardOnly: true },
-    { name: 'Staff', href: '/staff', icon: UserCheck, standardOnly: true },
-  ];
+    { name: 'Staff', href: '/staff', icon: UserCheck, standardOnly: true, ownerOnly: true },
+  ].filter((item) => userRole !== 'staff' && (!item.ownerOnly || userRole === 'owner'));
 
   return (
-    <aside
-      className={`${
-        collapsed ? 'w-20' : 'w-64'
-      } bg-black text-zinc-300 flex flex-col h-screen sticky top-0 border-r border-zinc-900 shadow-2xl transition-all duration-300 ease-in-out no-print shrink-0 z-40`}
-    >
+    <>
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open navigation"
+        className="md:hidden fixed left-3 top-3 z-40 p-2.5 rounded-xl bg-black text-white shadow-xl no-print"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/50 no-print"
+        />
+      )}
+      <aside
+        className={`${
+          collapsed ? 'md:w-20' : 'md:w-64'
+        } w-64 bg-black text-zinc-300 flex flex-col h-screen fixed md:sticky top-0 left-0 border-r border-zinc-900 shadow-2xl transition-all duration-300 ease-in-out no-print shrink-0 z-50 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
       {/* Brand Header & Toggle Button */}
-      <div className={`p-4 border-b border-zinc-900 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} gap-3`}>
+      <div className={`p-4 border-b border-zinc-900 flex items-center ${showLabels ? 'justify-between' : 'justify-center'} gap-3`}>
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center shadow-sm shrink-0 font-black tracking-tighter">
             <span className="text-base font-black">WX</span>
           </div>
-          {!collapsed && (
+          {showLabels && (
             <div className="overflow-hidden whitespace-nowrap">
               <h1 className="font-black text-lg tracking-wider text-white">WOODEX</h1>
               <p className="text-[9px] text-zinc-400 font-bold tracking-widest uppercase">Luxury Atelier & Timber</p>
@@ -93,16 +119,24 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
         <button
           onClick={toggleCollapsed}
           title={collapsed ? 'Enlarge screen / Expand sidebar' : 'Minimize sidebar (Enlarge screen)'}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition cursor-pointer shrink-0"
+          className="hidden md:block p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition cursor-pointer shrink-0"
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4 text-white" /> : <PanelLeftClose className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close navigation"
+          className="md:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         <div>
-          {!collapsed && (
+          {showLabels && (
             <div className="px-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
               Core Business
             </div>
@@ -117,7 +151,7 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
                   href={item.href}
                   title={collapsed ? item.name : undefined}
                   className={`flex items-center ${
-                    collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                    showLabels ? 'gap-3 px-3' : 'justify-center px-0'
                   } py-2.5 rounded-xl text-sm transition group relative ${
                     isActive
                       ? 'bg-white text-black font-bold shadow-sm'
@@ -125,10 +159,10 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>}
+                  {showLabels && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>}
 
                   {/* Floating tooltip in collapsed mode */}
-                  {collapsed && (
+                  {!showLabels && (
                     <div className="absolute left-full ml-2 px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition z-50">
                       {item.name}
                     </div>
@@ -140,7 +174,7 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
         </div>
 
         <div>
-          {!collapsed && (
+          {showLabels && (
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                 Standard Modules
@@ -162,7 +196,7 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
                   href={item.href}
                   title={collapsed ? item.name : undefined}
                   className={`flex items-center ${
-                    collapsed ? 'justify-center px-0' : 'justify-between px-3'
+                    showLabels ? 'justify-between px-3' : 'justify-center px-0'
                   } py-2.5 rounded-xl text-sm transition group relative ${
                     isActive
                       ? 'bg-white text-black font-bold shadow-sm'
@@ -171,12 +205,12 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
                 >
                   <div className="flex items-center gap-3">
                     <Icon className="w-4 h-4 shrink-0" />
-                    {!collapsed && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>}
+                    {showLabels && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>}
                   </div>
-                  {!collapsed && !isStandard && <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />}
+                  {showLabels && !isStandard && <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />}
 
                   {/* Floating tooltip in collapsed mode */}
-                  {collapsed && (
+                  {!showLabels && (
                     <div className="absolute left-full ml-2 px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition z-50 flex items-center gap-1.5">
                       <span>{item.name}</span>
                       {!isStandard && <Lock className="w-3 h-3 text-zinc-400" />}
@@ -195,7 +229,7 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
           href="/settings"
           title={collapsed ? 'Settings' : undefined}
           className={`flex items-center ${
-            collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+            showLabels ? 'gap-3 px-3' : 'justify-center px-0'
           } py-2 rounded-xl text-sm font-medium transition ${
             pathname === '/settings'
               ? 'bg-white text-black font-bold'
@@ -203,15 +237,16 @@ export function Sidebar({ businessPlan = 'lite' }: SidebarProps) {
           }`}
         >
           <Settings className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Settings</span>}
+          {showLabels && <span>Settings</span>}
         </Link>
         
-        {!collapsed && (
+        {showLabels && (
           <div className="pt-2 border-t border-zinc-900 flex items-center justify-between">
             <StatusBadge status={businessPlan} type="plan" />
           </div>
         )}
       </div>
     </aside>
+    </>
   );
 }

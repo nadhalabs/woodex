@@ -12,8 +12,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/feedback';
 import { StatusBadge } from './StatusBadge';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 interface CounterOrderLookupModalProps {
   isOpen: boolean;
@@ -41,6 +43,7 @@ export function CounterOrderLookupModal({
 
   // Print Modal
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  useEscapeKey(isOpen && !isPrintOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -107,6 +110,7 @@ export function CounterOrderLookupModal({
       setSearchResults((prev) =>
         prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
       );
+      showSuccess('Payment recorded successfully.');
     } catch (err: any) {
       console.error('Failed to record payment:', err);
       setPaymentError(err.message || 'Payment recording failed');
@@ -126,20 +130,21 @@ export function CounterOrderLookupModal({
       setSearchResults((prev) =>
         prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
       );
+      showSuccess('Delivery status updated.');
     } catch (err: any) {
-      alert(err.message || 'Failed to update status');
+      showError(err, 'Failed to update delivery status.');
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-zinc-300 overflow-hidden my-6 max-h-[90vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-labelledby="counter-order-lookup-title" className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-zinc-300 overflow-hidden my-6 max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="bg-black text-white p-4 px-6 flex items-center justify-between border-b border-zinc-800">
           <div className="flex items-center gap-2.5">
             <Receipt className="w-5 h-5 text-white" />
             <div>
-              <h3 className="font-black text-base uppercase tracking-wider">Counter Order Lookup & Payments</h3>
+              <h3 id="counter-order-lookup-title" className="font-black text-base uppercase tracking-wider">Counter Order Lookup & Payments</h3>
               <p className="text-xs text-zinc-400">Search customer orders, record installment payments, & reprint</p>
             </div>
           </div>
