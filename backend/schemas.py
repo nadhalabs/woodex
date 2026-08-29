@@ -187,6 +187,18 @@ class ProductImageReorderItem(BaseModel):
 class ProductImageReorderRequest(BaseModel):
     items: List[ProductImageReorderItem]
 
+
+class ImageUploadSignatureRequest(BaseModel):
+    folder: str = Field(min_length=1, max_length=512)
+
+
+class ImageUploadSignatureResponse(BaseModel):
+    cloud_name: str
+    api_key: str
+    timestamp: int
+    signature: str
+    folder: str
+
 # Product
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1)

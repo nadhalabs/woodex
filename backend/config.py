@@ -23,6 +23,11 @@ class Settings(BaseSettings):
 
     ALLOWED_ORIGINS: List[str] = DEFAULT_ALLOWED_ORIGINS
 
+    # Server-only Cloudinary credentials used to sign browser uploads.
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: SecretStr = SecretStr("")
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, value: SecretStr) -> SecretStr:

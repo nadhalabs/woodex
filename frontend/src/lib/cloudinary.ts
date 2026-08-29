@@ -1,8 +1,4 @@
-export const CLOUDINARY_CONFIG = {
-  cloudName: 'echlwce1',
-  uploadPreset: 'krishna_furniture_uploads',
-  uploadEndpoint: 'https://api.cloudinary.com/v1_1/echlwce1/image/upload',
-};
+import { fetchApi } from './api';
 
 export interface CloudinaryUploadResult {
   secure_url: string;
@@ -48,14 +44,18 @@ export async function uploadToCloudinary(
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-  if (folder) {
-    formData.append('folder', folder);
-  }
+  const signing = await fetchApi('/image-uploads/signature', {
+    method: 'POST',
+    body: JSON.stringify({ folder: folder || '' }),
+  });
+  formData.append('api_key', signing.api_key);
+  formData.append('timestamp', String(signing.timestamp));
+  formData.append('signature', signing.signature);
+  formData.append('folder', signing.folder);
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', CLOUDINARY_CONFIG.uploadEndpoint);
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${encodeURIComponent(signing.cloud_name)}/image/upload`);
 
     if (xhr.upload && onProgress) {
       xhr.upload.onprogress = (e) => {
