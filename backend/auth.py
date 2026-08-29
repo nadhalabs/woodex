@@ -90,6 +90,9 @@ def get_current_user(
     if user is None:
         log_auth_failure(request, "unknown_user")
         raise credentials_exception
+    if token_data.business_id and token_data.business_id != user.business_id:
+        log_auth_failure(request, "business_mismatch")
+        raise credentials_exception
     if user.role not in VALID_ROLES:
         log_auth_failure(request, "invalid_role")
         raise HTTPException(
@@ -102,6 +105,11 @@ def get_current_business(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Business:
+    if not current_user.business_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Business tenant not found"
+        )
     business = db.query(Business).filter(Business.id == current_user.business_id).first()
     if not business:
         raise HTTPException(

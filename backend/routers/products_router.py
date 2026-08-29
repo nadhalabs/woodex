@@ -1,11 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from backend.database import get_db
 from backend.models import (
     Product, Business, InventoryMovement, Category, ProductImage,
     InvoiceItem, OrderItem, PurchaseItem, QuotationItem,
+    Order, Invoice, Quotation, Purchase,
 )
 from backend.schemas import (
     ProductCreate,
@@ -167,7 +168,7 @@ def create_product(
     refreshed_product = (
         db.query(Product)
         .options(joinedload(Product.images), joinedload(Product.category_rel))
-        .filter(Product.id == product.id)
+        .filter(Product.id == product.id, Product.business_id == business.id)
         .first()
     )
     return refreshed_product
@@ -306,7 +307,7 @@ def update_product(
     refreshed_product = (
         db.query(Product)
         .options(joinedload(Product.images), joinedload(Product.category_rel))
-        .filter(Product.id == product.id)
+        .filter(Product.id == product.id, Product.business_id == business.id)
         .first()
     )
     return refreshed_product
@@ -362,10 +363,10 @@ def delete_product(
         raise HTTPException(status_code=404, detail="Product not found")
 
     referenced = (
-        db.query(OrderItem).filter(OrderItem.product_id == product.id).first()
-        or db.query(InvoiceItem).filter(InvoiceItem.product_id == product.id).first()
-        or db.query(QuotationItem).filter(QuotationItem.product_id == product.id).first()
-        or db.query(PurchaseItem).filter(PurchaseItem.product_id == product.id).first()
+        db.query(OrderItem).join(Order, and_(Order.id == OrderItem.order_id, Order.business_id == business.id)).filter(OrderItem.product_id == product.id).first()
+        or db.query(InvoiceItem).join(Invoice, and_(Invoice.id == InvoiceItem.invoice_id, Invoice.business_id == business.id)).filter(InvoiceItem.product_id == product.id).first()
+        or db.query(QuotationItem).join(Quotation, and_(Quotation.id == QuotationItem.quotation_id, Quotation.business_id == business.id)).filter(QuotationItem.product_id == product.id).first()
+        or db.query(PurchaseItem).join(Purchase, and_(Purchase.id == PurchaseItem.purchase_id, Purchase.business_id == business.id)).filter(PurchaseItem.product_id == product.id).first()
         or db.query(InventoryMovement).filter(
             InventoryMovement.business_id == business.id,
             InventoryMovement.product_id == product.id,

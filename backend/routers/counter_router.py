@@ -4,6 +4,7 @@ from decimal import Decimal
 import hashlib
 import json
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database import get_db
@@ -390,7 +391,10 @@ def search_counter_orders(
     query_str = f"%{q.strip()}%"
     orders = (
         db.query(Order)
-        .join(Customer, Order.customer_id == Customer.id)
+        .join(
+            Customer,
+            and_(Order.customer_id == Customer.id, Customer.business_id == business.id),
+        )
         .filter(
             Order.business_id == business.id,
             (
@@ -408,7 +412,7 @@ def search_counter_orders(
     for ord_obj in orders:
         c = ord_obj.customer
         ord_dict = OrderResponse.model_validate(ord_obj)
-        if c:
+        if c and c.business_id == business.id:
             ord_dict.customer_name = c.name
             ord_dict.customer_phone = c.phone
         res.append(ord_dict)
