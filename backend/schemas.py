@@ -189,7 +189,8 @@ class ProductImageReorderRequest(BaseModel):
 
 
 class ImageUploadSignatureRequest(BaseModel):
-    folder: str = Field(min_length=1, max_length=512)
+    resource_type: Literal["product", "category"]
+    resource_id: str = Field(min_length=1, max_length=128)
 
 
 class ImageUploadSignatureResponse(BaseModel):

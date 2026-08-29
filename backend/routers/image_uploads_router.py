@@ -3,10 +3,12 @@ import re
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from backend.auth import get_current_business, require_manager_or_owner
 from backend.config import settings
-from backend.models import Business
+from backend.database import get_db
+from backend.models import Business, Category, Product
 from backend.schemas import ImageUploadSignatureRequest, ImageUploadSignatureResponse
 
 router = APIRouter(prefix="/image-uploads", tags=["Image Uploads"])
@@ -17,18 +19,6 @@ def _slugify(value: str) -> str:
     value = re.sub(r"[^\w\s-]", "", value)
     value = re.sub(r"[\s_-]+", "-", value)
     return re.sub(r"^-+|-+$", "", value) or "item"
-
-
-def _tenant_folder(requested_folder: str, business_id: str) -> str:
-    parts = [part for part in requested_folder.strip("/").split("/") if part]
-    if parts and parts[-1] == "categories":
-        return f"woodex/{business_id}/categories"
-    if len(parts) >= 2 and parts[-2] == "products":
-        return f"woodex/{business_id}/products/{_slugify(parts[-1])}"
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Image folder must target an existing product or category upload flow",
-    )
 
 
 def _sign_upload_params(folder: str, timestamp: int, api_secret: str) -> str:
@@ -43,6 +33,7 @@ def _sign_upload_params(folder: str, timestamp: int, api_secret: str) -> str:
 )
 def create_image_upload_signature(
     req: ImageUploadSignatureRequest,
+    db: Session = Depends(get_db),
     business: Business = Depends(get_current_business),
 ):
     cloud_name = settings.CLOUDINARY_CLOUD_NAME.strip()
@@ -54,8 +45,37 @@ def create_image_upload_signature(
             detail="Image uploads are not configured",
         )
 
+    if req.resource_type == "category":
+        category = (
+            db.query(Category)
+            .filter(Category.id == req.resource_id, Category.business_id == business.id)
+            .first()
+        )
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Category not found",
+            )
+        folder = f"woodex/{business.id}/categories"
+    elif req.resource_type == "product":
+        product = (
+            db.query(Product)
+            .filter(Product.id == req.resource_id, Product.business_id == business.id)
+            .first()
+        )
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found",
+            )
+        folder = f"woodex/{business.id}/products/{_slugify(product.name)}"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid resource type",
+        )
+
     timestamp = int(time.time())
-    folder = _tenant_folder(req.folder, business.id)
     signature = _sign_upload_params(folder, timestamp, api_secret)
 
     return ImageUploadSignatureResponse(

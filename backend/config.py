@@ -1,4 +1,4 @@
-from typing import Any, List, Literal
+from typing import Any, List, Literal, Union
 
 from pydantic import SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # PostgreSQL connection string
     DATABASE_URL: str
 
-    ALLOWED_ORIGINS: List[str] = DEFAULT_ALLOWED_ORIGINS
+    ALLOWED_ORIGINS: Union[List[str], str] = DEFAULT_ALLOWED_ORIGINS
 
     # Server-only Cloudinary credentials used to sign browser uploads.
     CLOUDINARY_CLOUD_NAME: str = ""

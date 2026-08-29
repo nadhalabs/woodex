@@ -14,22 +14,20 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '') || 'item';
 }
 
-export function getProductCloudinaryFolder(businessId: string, productSlugOrName: string): string {
-  const cleanBiz = businessId || 'default';
-  const cleanSlug = slugify(productSlugOrName);
-  return `woodex/${cleanBiz}/products/${cleanSlug}`;
-}
-
-export function getCategoryCloudinaryFolder(businessId: string): string {
-  const cleanBiz = businessId || 'default';
-  return `woodex/${cleanBiz}/categories`;
+export interface UploadResourceTarget {
+  resourceType: 'product' | 'category';
+  resourceId: string;
 }
 
 export async function uploadToCloudinary(
   file: File,
-  folder?: string,
+  target: UploadResourceTarget,
   onProgress?: (percent: number) => void
 ): Promise<CloudinaryUploadResult> {
+  if (!target || !target.resourceId) {
+    throw new Error('Resource ID is required to upload an image. Please save the item first.');
+  }
+
   // Validate file type
   const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (!validTypes.includes(file.type)) {
@@ -46,7 +44,10 @@ export async function uploadToCloudinary(
   formData.append('file', file);
   const signing = await fetchApi('/image-uploads/signature', {
     method: 'POST',
-    body: JSON.stringify({ folder: folder || '' }),
+    body: JSON.stringify({
+      resource_type: target.resourceType,
+      resource_id: target.resourceId,
+    }),
   });
   formData.append('api_key', signing.api_key);
   formData.append('timestamp', String(signing.timestamp));

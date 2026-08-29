@@ -22,7 +22,7 @@ import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ImageUploadDropzone } from '@/components/ImageUploadDropzone';
-import { getOptimizedImageUrl, getCategoryCloudinaryFolder } from '@/lib/cloudinary';
+import { getOptimizedImageUrl } from '@/lib/cloudinary';
 import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function CategoriesPage() {
@@ -480,8 +480,10 @@ export default function CategoriesPage() {
                 value={formDataImage?.url}
                 publicId={formDataImage?.public_id}
                 onChange={setFormDataImage}
-                folder={getCategoryCloudinaryFolder(me?.business?.id)}
+                resourceType="category"
+                resourceId={editingCategory?.id}
                 label="Category Cover Photo"
+                helperText={editingCategory ? "JPEG, PNG, or WebP up to 10MB" : "Save category first to upload a cover photo"}
               />
 
               <div className="flex items-center gap-2 pt-2">

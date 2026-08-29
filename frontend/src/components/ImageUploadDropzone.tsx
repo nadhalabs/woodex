@@ -8,7 +8,8 @@ interface ImageUploadDropzoneProps {
   value?: string | null;
   publicId?: string | null;
   onChange: (result: { url: string; public_id: string } | null) => void;
-  folder?: string;
+  resourceType?: 'product' | 'category';
+  resourceId?: string | null;
   label?: string;
   helperText?: string;
   className?: string;
@@ -18,7 +19,8 @@ export function ImageUploadDropzone({
   value,
   publicId,
   onChange,
-  folder,
+  resourceType = 'category',
+  resourceId,
   label = 'Upload Image',
   helperText = 'JPEG, PNG, or WebP up to 10MB',
   className = '',
@@ -34,6 +36,11 @@ export function ImageUploadDropzone({
 
   const handleFile = async (file: File) => {
     setError(null);
+
+    if (!resourceId) {
+      setError(`Please save the ${resourceType} first before uploading an image.`);
+      return;
+    }
 
     // Validate type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -55,9 +62,16 @@ export function ImageUploadDropzone({
     setProgress(10);
 
     try {
-      const res = await uploadToCloudinary(file, folder, (percent) => {
-        setProgress(percent);
-      });
+      const res = await uploadToCloudinary(
+        file,
+        {
+          resourceType,
+          resourceId,
+        },
+        (percent) => {
+          setProgress(percent);
+        }
+      );
       onChange({
         url: res.secure_url,
         public_id: res.public_id,
