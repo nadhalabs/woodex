@@ -114,6 +114,8 @@ def counter_checkout(
             Customer.id == req.customer_id,
             Customer.business_id == business.id
         ).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
 
     if not customer and req.customer_phone:
         # Search by phone for this business

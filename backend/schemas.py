@@ -1,8 +1,22 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional, Any, Dict, Literal
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 PaymentMethod = Literal["cash", "upi", "card", "bank_transfer", "other"]
+Plan = Literal["lite", "standard"]
+OrderStatus = Literal["new", "confirmed", "in_progress", "ready", "out_for_delivery", "delivered", "cancelled"]
+DeliveryStatus = Literal["pending", "scheduled", "out_for_delivery", "delivered"]
+QuotationStatus = Literal["draft", "sent", "accepted", "rejected"]
+
+
+def validate_iso_date(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return value
+    try:
+        date.fromisoformat(value)
+    except (TypeError, ValueError):
+        raise ValueError("Date must use YYYY-MM-DD format") from None
+    return value
 
 # Auth & Token
 class Token(BaseModel):
@@ -20,14 +34,14 @@ class LoginRequest(BaseModel):
     password: str
 
 class BusinessRegisterRequest(BaseModel):
-    business_name: str
-    owner_name: str
+    business_name: str = Field(min_length=1)
+    owner_name: str = Field(min_length=1)
     email: EmailStr
     password: str
     phone: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
-    plan: str = "lite"  # "lite" or "standard"
+    plan: Plan = "lite"
 
 # Business & User
 class BusinessResponse(BaseModel):
@@ -163,15 +177,15 @@ class ProductImageReorderRequest(BaseModel):
 
 # Product
 class ProductCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1)
     category_id: Optional[str] = None
     category: Optional[str] = None
     sku: Optional[str] = None
     description: Optional[str] = None
-    selling_price: float = 0.0
-    cost_price: float = 0.0
+    selling_price: float = Field(default=0.0, ge=0.0)
+    cost_price: float = Field(default=0.0, ge=0.0)
     current_stock: int = 0
-    low_stock_level: int = 5
+    low_stock_level: int = Field(default=5, ge=0)
     image_url: Optional[str] = None
     image_public_id: Optional[str] = None
     images: Optional[List[ProductImageCreate]] = None
@@ -185,10 +199,10 @@ class ProductUpdate(BaseModel):
     category: Optional[str] = None
     sku: Optional[str] = None
     description: Optional[str] = None
-    selling_price: Optional[float] = None
-    cost_price: Optional[float] = None
+    selling_price: Optional[float] = Field(default=None, ge=0.0)
+    cost_price: Optional[float] = Field(default=None, ge=0.0)
     current_stock: Optional[int] = None
-    low_stock_level: Optional[int] = None
+    low_stock_level: Optional[int] = Field(default=None, ge=0)
     image_url: Optional[str] = None
     image_public_id: Optional[str] = None
     images: Optional[List[ProductImageCreate]] = None
@@ -228,19 +242,21 @@ class StockAdjustmentRequest(BaseModel):
 class QuotationItemBase(BaseModel):
     product_id: Optional[str] = None
     product_name: str
-    quantity: int = 1
-    unit_price: float = 0.0
+    quantity: int = Field(default=1, gt=0)
+    unit_price: float = Field(default=0.0, ge=0.0)
 
 class QuotationCreate(BaseModel):
     customer_id: str
     validity_date: Optional[str] = None
     notes: Optional[str] = None
-    discount: float = 0.0
-    tax_rate: float = 18.0
-    items: List[QuotationItemBase]
+    discount: float = Field(default=0.0, ge=0.0)
+    tax_rate: float = Field(default=18.0, ge=0.0, le=100.0)
+    items: List[QuotationItemBase] = Field(min_length=1)
+
+    _validate_validity_date = field_validator("validity_date")(validate_iso_date)
 
 class QuotationStatusUpdate(BaseModel):
-    status: str  # draft, sent, accepted, rejected
+    status: QuotationStatus
 
 class QuotationItemResponse(QuotationItemBase):
     id: str
@@ -275,24 +291,27 @@ class OrderItemBase(BaseModel):
     product_id: Optional[str] = None
     product_name: str
     variant_name: Optional[str] = None
-    quantity: int = 1
-    unit_price: float = 0.0
+    quantity: int = Field(default=1, gt=0)
+    unit_price: float = Field(default=0.0, ge=0.0)
 
 class OrderCreate(BaseModel):
     customer_id: str
     order_date: str
     expected_delivery_date: Optional[str] = None
     custom_specs: Optional[Dict[str, Any]] = None  # dimensions, wood_type, color, fabric, finish, design_notes
-    discount: float = 0.0
-    tax_amount: float = 0.0
+    discount: float = Field(default=0.0, ge=0.0)
+    tax_amount: float = Field(default=0.0, ge=0.0)
     advance_amount: float = Field(default=0.0, ge=0.0)
     delivery_address: Optional[str] = None
     delivery_notes: Optional[str] = None
-    items: List[OrderItemBase]
+    items: List[OrderItemBase] = Field(min_length=1)
+
+    _validate_order_date = field_validator("order_date")(validate_iso_date)
+    _validate_expected_date = field_validator("expected_delivery_date")(validate_iso_date)
 
 class OrderStatusUpdate(BaseModel):
-    order_status: Optional[str] = None  # new, confirmed, in_progress, ready, out_for_delivery, delivered
-    delivery_status: Optional[str] = None  # pending, scheduled, out_for_delivery, delivered
+    order_status: Optional[OrderStatus] = None
+    delivery_status: Optional[DeliveryStatus] = None
 
 class OrderItemResponse(OrderItemBase):
     id: str
@@ -337,6 +356,8 @@ class PaymentCreate(BaseModel):
     reference_number: Optional[str] = None
     notes: Optional[str] = None
 
+    _validate_payment_date = field_validator("payment_date")(validate_iso_date)
+
 class PaymentResponse(PaymentCreate):
     id: str
     business_id: str
@@ -350,11 +371,11 @@ class InvoiceItemBase(BaseModel):
     product_id: Optional[str] = None
     product_name: str
     sku: Optional[str] = None
-    quantity: int = 1
-    unit_price: float = 0.0
-    discount: float = 0.0
-    tax_rate: float = 18.0
-    tax_amount: float = 0.0
+    quantity: int = Field(default=1, gt=0)
+    unit_price: float = Field(default=0.0, ge=0.0)
+    discount: float = Field(default=0.0, ge=0.0)
+    tax_rate: float = Field(default=18.0, ge=0.0, le=100.0)
+    tax_amount: float = Field(default=0.0, ge=0.0)
 
 class InvoiceCreate(BaseModel):
     order_id: Optional[str] = None
@@ -362,11 +383,14 @@ class InvoiceCreate(BaseModel):
     issue_date: str
     due_date: Optional[str] = None
     gstin: Optional[str] = None
-    discount: float = 0.0
-    tax_amount: float = 0.0
+    discount: float = Field(default=0.0, ge=0.0)
+    tax_amount: float = Field(default=0.0, ge=0.0)
     paid_amount: float = Field(default=0.0, ge=0.0)
     notes: Optional[str] = None
-    items: List[InvoiceItemBase]
+    items: List[InvoiceItemBase] = Field(min_length=1)
+
+    _validate_issue_date = field_validator("issue_date")(validate_iso_date)
+    _validate_due_date = field_validator("due_date")(validate_iso_date)
 
 class InvoiceItemResponse(InvoiceItemBase):
     id: str
@@ -420,16 +444,16 @@ class CounterItemInput(BaseModel):
     discount: float = Field(default=0.0, ge=0.0)
 
 class CounterCheckoutRequest(BaseModel):
-    sale_type: str = "direct_sale"  # "direct_sale" or "customer_order"
+    sale_type: Literal["direct_sale", "customer_order"] = "direct_sale"
     customer_id: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_address: Optional[str] = None
     customer_gstin: Optional[str] = None
-    items: List[CounterItemInput]
-    bill_discount: float = 0.0
-    discount_type: str = "fixed"  # "fixed" or "percentage"
-    tax_rate: float = 18.0
+    items: List[CounterItemInput] = Field(min_length=1)
+    bill_discount: float = Field(default=0.0, ge=0.0)
+    discount_type: Literal["fixed", "percentage"] = "fixed"
+    tax_rate: float = Field(default=18.0, ge=0.0, le=100.0)
     tax_inclusive: bool = False
     paid_amount: float = Field(default=0.0, ge=0.0)
     payment_method: PaymentMethod = "cash"
@@ -440,6 +464,14 @@ class CounterCheckoutRequest(BaseModel):
     delivery_notes: Optional[str] = None
     custom_specs: Optional[Dict[str, Any]] = None
     idempotency_key: Optional[str] = None
+
+    _validate_expected_date = field_validator("expected_delivery_date")(validate_iso_date)
+
+    @model_validator(mode="after")
+    def validate_percentage_discount(self):
+        if self.discount_type == "percentage" and self.bill_discount > 100:
+            raise ValueError("Percentage discount cannot exceed 100")
+        return self
 
 class CounterCheckoutResponse(BaseModel):
     order: OrderResponse
@@ -464,9 +496,11 @@ class HeldBillResponse(BaseModel):
 # Expense
 class ExpenseCreate(BaseModel):
     category: str  # transport, labour, electricity, rent, maintenance, other
-    amount: float
+    amount: float = Field(gt=0)
     date: str
     description: Optional[str] = None
+
+    _validate_expense_date = field_validator("date")(validate_iso_date)
 
 class ExpenseResponse(ExpenseCreate):
     id: str
@@ -495,15 +529,17 @@ class SupplierResponse(SupplierCreate):
 class PurchaseItemBase(BaseModel):
     product_id: Optional[str] = None
     product_name: str
-    quantity: int = 1
-    unit_price: float = 0.0
+    quantity: int = Field(default=1, gt=0)
+    unit_price: float = Field(default=0.0, ge=0.0)
 
 class PurchaseCreate(BaseModel):
     supplier_id: str
     purchase_date: str
-    tax_amount: float = 0.0
+    tax_amount: float = Field(default=0.0, ge=0.0)
     notes: Optional[str] = None
-    items: List[PurchaseItemBase]
+    items: List[PurchaseItemBase] = Field(min_length=1)
+
+    _validate_purchase_date = field_validator("purchase_date")(validate_iso_date)
 
 class PurchaseItemResponse(PurchaseItemBase):
     id: str

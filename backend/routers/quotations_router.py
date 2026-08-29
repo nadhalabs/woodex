@@ -48,6 +48,17 @@ def create_quotation(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
+    product_ids = sorted({item.product_id for item in req.items if item.product_id})
+    if product_ids:
+        tenant_product_ids = {
+            product.id for product in db.query(Product).filter(
+                Product.business_id == business.id,
+                Product.id.in_(product_ids),
+            ).all()
+        }
+        if tenant_product_ids != set(product_ids):
+            raise HTTPException(status_code=404, detail="Product not found")
+
     subtotal = sum(item.quantity * item.unit_price for item in req.items)
     taxable = max(0.0, subtotal - req.discount)
     tax_amount = round(taxable * (req.tax_rate / 100.0), 2)
@@ -125,11 +136,10 @@ def update_quotation_status(
     if quotation.status == "converted":
         raise HTTPException(status_code=409, detail="Converted quotation status cannot be changed")
 
-    valid_statuses = ["draft", "sent", "accepted", "rejected"]
-    if req.status.lower() not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"Status must be one of {valid_statuses}")
+    if quotation.status == "rejected" and req.status != "rejected":
+        raise HTTPException(status_code=409, detail="Rejected quotation status cannot be changed")
 
-    quotation.status = req.status.lower()
+    quotation.status = req.status
     db.commit()
     db.refresh(quotation)
 
@@ -155,6 +165,8 @@ def convert_to_order(
 
     if quotation.status == "converted":
         raise HTTPException(status_code=409, detail="Quotation has already been converted")
+    if quotation.status == "rejected":
+        raise HTTPException(status_code=409, detail="Rejected quotation cannot be converted")
 
     customer = db.query(Customer).filter(Customer.id == quotation.customer_id).first()
     if not customer:
@@ -264,6 +276,9 @@ def delete_quotation(
     ).first()
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if quotation.status == "converted":
+        raise HTTPException(status_code=409, detail="Converted quotation cannot be deleted")
 
     db.delete(quotation)
     db.commit()

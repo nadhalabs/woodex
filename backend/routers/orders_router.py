@@ -8,10 +8,10 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import (
     Order, OrderItem, Customer, Product, Business, InventoryMovement,
-    Payment, CheckoutIdempotency,
+    Payment, CheckoutIdempotency, User,
 )
 from backend.schemas import OrderCreate, OrderStatusUpdate, OrderResponse
-from backend.auth import get_current_business, require_manager_or_owner
+from backend.auth import get_current_business, get_current_user, require_manager_or_owner
 
 from backend.services.sequence_service import get_next_sequence_number
 
@@ -56,6 +56,7 @@ def create_order(
     req: OrderCreate,
     db: Session = Depends(get_db),
     business: Business = Depends(get_current_business),
+    current_user: User = Depends(get_current_user),
     idempotency_key_header: Optional[str] = Header(None, alias="X-Idempotency-Key"),
 ):
     idempotency_key = idempotency_key_header.strip() if idempotency_key_header else None
@@ -127,6 +128,11 @@ def create_order(
                 status_code=400,
                 detail=f"Insufficient stock for '{product.name}'. Requested: {requested}, Available: {product.current_stock}",
             )
+
+    if current_user.role == "staff":
+        for item in req.items:
+            if item.product_id and item.unit_price < product_map[item.product_id].selling_price:
+                raise HTTPException(status_code=403, detail="Staff cannot sell below the stored product price")
 
     order_num = generate_order_number(db, business.id)
 
@@ -259,23 +265,26 @@ def update_order_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    valid_order_statuses = ["new", "confirmed", "in_progress", "ready", "out_for_delivery", "delivered"]
-    valid_delivery_statuses = ["pending", "scheduled", "out_for_delivery", "delivered"]
+    if order.order_status in {"delivered", "cancelled"}:
+        if req.order_status and req.order_status != order.order_status:
+            raise HTTPException(status_code=409, detail="Terminal order status cannot be changed")
+        if req.delivery_status and req.delivery_status != order.delivery_status:
+            raise HTTPException(status_code=409, detail="Terminal order delivery status cannot be changed")
+
+    if req.order_status == "cancelled" and order.delivery_status == "delivered":
+        raise HTTPException(status_code=409, detail="Delivered order cannot be cancelled")
+    if req.delivery_status == "delivered" and order.order_status == "cancelled":
+        raise HTTPException(status_code=409, detail="Cancelled order cannot be delivered")
 
     if req.order_status:
-        st = req.order_status.lower()
-        if st in valid_order_statuses:
-            order.order_status = st
-            # Sync delivery status if order is marked out for delivery or delivered
-            if st == "out_for_delivery":
-                order.delivery_status = "out_for_delivery"
-            elif st == "delivered":
-                order.delivery_status = "delivered"
+        order.order_status = req.order_status
+        if req.order_status == "out_for_delivery":
+            order.delivery_status = "out_for_delivery"
+        elif req.order_status == "delivered":
+            order.delivery_status = "delivered"
 
     if req.delivery_status:
-        dst = req.delivery_status.lower()
-        if dst in valid_delivery_statuses:
-            order.delivery_status = dst
+        order.delivery_status = req.delivery_status
 
     db.commit()
     db.refresh(order)
@@ -299,6 +308,9 @@ def delete_order(
     ).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.items or order.payments or order.invoices:
+        raise HTTPException(status_code=409, detail="Order with transaction history cannot be deleted")
 
     db.delete(order)
     db.commit()

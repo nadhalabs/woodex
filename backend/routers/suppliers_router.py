@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import Supplier, Business
+from backend.models import Supplier, Purchase, Business
 from backend.schemas import SupplierCreate, SupplierResponse
 from backend.auth import get_current_business, require_standard_plan, require_manager_or_owner
 
@@ -46,6 +46,11 @@ def delete_supplier(
     ).first()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
+    if db.query(Purchase).filter(
+        Purchase.business_id == business.id,
+        Purchase.supplier_id == supplier.id,
+    ).first():
+        raise HTTPException(status_code=409, detail="Supplier with purchase history cannot be deleted")
     db.delete(supplier)
     db.commit()
     return None

@@ -37,6 +37,17 @@ def create_purchase(
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
+    product_ids = sorted({item.product_id for item in req.items if item.product_id})
+    products = []
+    if product_ids:
+        products = db.query(Product).filter(
+            Product.business_id == business.id,
+            Product.id.in_(product_ids),
+        ).all()
+        if {product.id for product in products} != set(product_ids):
+            raise HTTPException(status_code=404, detail="Product not found")
+    product_map = {product.id: product for product in products}
+
     subtotal = sum(item.quantity * item.unit_price for item in req.items)
     total_amount = round(subtotal + req.tax_amount, 2)
 
@@ -68,7 +79,7 @@ def create_purchase(
 
         # Increment product stock on purchase receipt
         if item.product_id:
-            prod = db.query(Product).filter(Product.id == item.product_id, Product.business_id == business.id).first()
+            prod = product_map.get(item.product_id)
             if prod:
                 prev_stock = prod.current_stock
                 prod.current_stock += item.quantity

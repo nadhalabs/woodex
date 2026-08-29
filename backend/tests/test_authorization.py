@@ -282,7 +282,10 @@ def test_manager_has_operational_management_but_not_owner_access(manager_headers
     quotation = client.post(
         "/api/v1/quotations",
         headers=manager_headers,
-        json={"customer_id": customer_id, "items": []},
+        json={
+            "customer_id": customer_id,
+            "items": [{"product_name": "Manager Quotation Item", "quantity": 1, "unit_price": 1}],
+        },
     )
     assert quotation.status_code == 201
     assert client.delete(
@@ -301,7 +304,7 @@ def test_manager_has_operational_management_but_not_owner_access(manager_headers
         json={
             "supplier_id": supplier.json()["id"],
             "purchase_date": "2026-08-29",
-            "items": [],
+            "items": [{"product_name": "Manager Purchase Item", "quantity": 1, "unit_price": 1}],
         },
     )
     assert purchase.status_code == 201

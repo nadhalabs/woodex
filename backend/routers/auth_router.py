@@ -23,7 +23,7 @@ def register_business(req: BusinessRegisterRequest, response: Response, db: Sess
         phone=req.phone,
         address=req.address,
         gstin=req.gstin,
-        plan=req.plan.lower() if req.plan.lower() in ["lite", "standard"] else "lite"
+        plan=req.plan
     )
     db.add(new_business)
     db.flush()

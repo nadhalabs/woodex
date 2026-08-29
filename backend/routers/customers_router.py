@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from backend.database import get_db
-from backend.models import Customer, Business, Order
+from backend.models import Customer, Business, Invoice, Order, Quotation
 from backend.schemas import CustomerCreate, CustomerUpdate, CustomerResponse
 from backend.auth import get_current_business, require_manager_or_owner
 
@@ -113,6 +113,14 @@ def delete_customer(
     ).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
+
+    has_history = (
+        db.query(Order).filter(Order.business_id == business.id, Order.customer_id == customer.id).first()
+        or db.query(Invoice).filter(Invoice.business_id == business.id, Invoice.customer_id == customer.id).first()
+        or db.query(Quotation).filter(Quotation.business_id == business.id, Quotation.customer_id == customer.id).first()
+    )
+    if has_history:
+        raise HTTPException(status_code=409, detail="Customer with transaction history cannot be deleted")
 
     db.delete(customer)
     db.commit()

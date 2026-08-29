@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.database import get_db
@@ -14,10 +14,10 @@ class BusinessUpdateRequest(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
-    plan: Optional[str] = None  # "lite" or "standard"
+    plan: Optional[Literal["lite", "standard"]] = None
     invoice_prefix: Optional[str] = None
     order_prefix: Optional[str] = None
-    default_tax_rate: Optional[float] = None
+    default_tax_rate: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     tax_inclusive: Optional[bool] = None
     invoice_footer: Optional[str] = None
     allow_negative_stock: Optional[bool] = None
@@ -43,15 +43,13 @@ def update_business_details(
     if req.gstin is not None:
         business.gstin = req.gstin
     if req.plan is not None:
-        plan_lower = req.plan.lower()
-        if plan_lower in ["lite", "standard"]:
-            business.plan = plan_lower
+        business.plan = req.plan
     if req.invoice_prefix is not None:
         business.invoice_prefix = req.invoice_prefix.strip()
     if req.order_prefix is not None:
         business.order_prefix = req.order_prefix.strip()
     if req.default_tax_rate is not None:
-        business.default_tax_rate = max(0.0, float(req.default_tax_rate))
+        business.default_tax_rate = req.default_tax_rate
     if req.tax_inclusive is not None:
         business.tax_inclusive = req.tax_inclusive
     if req.invoice_footer is not None:

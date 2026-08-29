@@ -3,7 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from backend.database import get_db
-from backend.models import Product, Business, InventoryMovement, Category, ProductImage
+from backend.models import (
+    Product, Business, InventoryMovement, Category, ProductImage,
+    InvoiceItem, OrderItem, PurchaseItem, QuotationItem,
+)
 from backend.schemas import (
     ProductCreate,
     ProductUpdate,
@@ -357,6 +360,19 @@ def delete_product(
     ).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    referenced = (
+        db.query(OrderItem).filter(OrderItem.product_id == product.id).first()
+        or db.query(InvoiceItem).filter(InvoiceItem.product_id == product.id).first()
+        or db.query(QuotationItem).filter(QuotationItem.product_id == product.id).first()
+        or db.query(PurchaseItem).filter(PurchaseItem.product_id == product.id).first()
+        or db.query(InventoryMovement).filter(
+            InventoryMovement.business_id == business.id,
+            InventoryMovement.product_id == product.id,
+        ).first()
+    )
+    if referenced:
+        raise HTTPException(status_code=409, detail="Product with transaction history cannot be deleted")
 
     db.delete(product)
     db.commit()

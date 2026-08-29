@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import Invoice, InvoiceItem, Order, Payment, Customer, Business
+from backend.models import Invoice, InvoiceItem, Order, Payment, Customer, Product, Business
 from backend.schemas import InvoiceCreate, InvoiceResponse
 from backend.auth import get_current_business, require_manager_or_owner
 
@@ -62,9 +62,28 @@ def create_invoice(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    subtotal = sum(item.quantity * item.unit_price for item in req.items)
-    taxable = max(0.0, subtotal - req.discount)
-    total_amount = round(taxable + req.tax_amount, 2)
+    product_ids = sorted({item.product_id for item in req.items if item.product_id}) if not order else []
+    if product_ids:
+        tenant_product_ids = {
+            product.id for product in db.query(Product).filter(
+                Product.business_id == business.id,
+                Product.id.in_(product_ids),
+            ).all()
+        }
+        if tenant_product_ids != set(product_ids):
+            raise HTTPException(status_code=404, detail="Product not found")
+
+    if order:
+        subtotal = order.subtotal
+        discount = order.discount
+        tax_amount = order.tax_amount
+        total_amount = order.total_amount
+    else:
+        subtotal = sum(item.quantity * item.unit_price for item in req.items)
+        discount = req.discount
+        tax_amount = req.tax_amount
+        taxable = max(0.0, subtotal - discount)
+        total_amount = round(taxable + tax_amount, 2)
     if req.paid_amount > total_amount:
         raise HTTPException(status_code=400, detail="Paid amount cannot exceed invoice total")
 
@@ -82,7 +101,7 @@ def create_invoice(
         order_id=req.order_id,
         customer_id=req.customer_id,
         issue_date=req.issue_date,
-        due_date=req.due_date,
+        due_date=order.expected_delivery_date if order else req.due_date,
         gstin=req.gstin or customer.gstin or business.gstin,
         
         # Snapshots
@@ -96,8 +115,10 @@ def create_invoice(
         business_gstin=business.gstin,
 
         subtotal=subtotal,
-        discount=req.discount,
-        tax_amount=req.tax_amount,
+        discount=discount,
+        tax_rate=order.tax_rate if order else 18.0,
+        tax_amount=tax_amount,
+        tax_inclusive=order.tax_inclusive if order else False,
         total_amount=total_amount,
         paid_amount=paid_amount,
         balance_amount=balance_amount,
@@ -106,20 +127,31 @@ def create_invoice(
     db.add(invoice)
     db.flush()
 
-    for item in req.items:
-        inv_item = InvoiceItem(
-            invoice_id=invoice.id,
-            product_id=item.product_id,
-            product_name=item.product_name,
-            sku=item.sku,
-            quantity=item.quantity,
-            unit_price=item.unit_price,
-            discount=item.discount,
-            tax_rate=item.tax_rate,
-            tax_amount=item.tax_amount,
-            total_price=item.quantity * item.unit_price
-        )
-        db.add(inv_item)
+    if order:
+        for item in order.items:
+            db.add(InvoiceItem(
+                invoice_id=invoice.id,
+                product_id=item.product_id,
+                product_name=item.product_name,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+            ))
+    else:
+        for item in req.items:
+            db.add(InvoiceItem(
+                invoice_id=invoice.id,
+                product_id=item.product_id,
+                product_name=item.product_name,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                discount=item.discount,
+                tax_rate=item.tax_rate,
+                tax_amount=item.tax_amount,
+                total_price=item.quantity * item.unit_price,
+            ))
 
     db.commit()
     db.refresh(invoice)

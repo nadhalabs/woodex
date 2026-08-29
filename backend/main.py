@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from backend.config import settings
 
 from backend.routers import (
@@ -26,6 +28,16 @@ app = FastAPI(
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(_request, _exc):
+    return JSONResponse(status_code=409, content={"detail": "Database conflict"})
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error_handler(_request, _exc):
+    return JSONResponse(status_code=500, content={"detail": "Database operation failed"})
 
 # Configure CORS for frontend access
 app.add_middleware(
