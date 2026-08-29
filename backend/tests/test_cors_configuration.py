@@ -180,3 +180,38 @@ def test_cors_middleware_with_custom_production_origins():
     res_disallowed = test_client.get("/ping", headers={"Origin": "http://localhost:3000"})
     assert res_disallowed.status_code == 200
     assert "access-control-allow-origin" not in res_disallowed.headers
+
+
+def test_env_settings_source_loading_render_format(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "a" * 32)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test")
+    monkeypatch.setenv("ALLOWED_ORIGINS", "https://woodex.vercel.app,https://app.example.com")
+
+    settings = Settings(_env_file=None)
+    assert settings.ALLOWED_ORIGINS == [
+        "https://woodex.vercel.app",
+        "https://app.example.com",
+    ]
+
+
+def test_env_settings_source_loading_single_origin(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "a" * 32)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test")
+    monkeypatch.setenv("ALLOWED_ORIGINS", "https://woodex.vercel.app")
+
+    settings = Settings(_env_file=None)
+    assert settings.ALLOWED_ORIGINS == ["https://woodex.vercel.app"]
+
+
+def test_env_settings_source_wildcard_rejected(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "a" * 32)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test")
+    monkeypatch.setenv("ALLOWED_ORIGINS", "*")
+
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(_env_file=None)
+    assert "Wildcard origin '*' is not allowed" in str(exc_info.value)
+

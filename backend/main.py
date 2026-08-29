@@ -23,6 +23,7 @@ from backend.routers import (
     suppliers_router,
     purchases_router,
     inventory_router,
+    image_uploads_router,
     staff_router,
     business_router,
     counter_router,
@@ -108,6 +109,7 @@ app.include_router(reports_router.router, prefix=settings.API_V1_STR)
 app.include_router(suppliers_router.router, prefix=settings.API_V1_STR)
 app.include_router(purchases_router.router, prefix=settings.API_V1_STR)
 app.include_router(inventory_router.router, prefix=settings.API_V1_STR)
+app.include_router(image_uploads_router.router, prefix=settings.API_V1_STR)
 app.include_router(staff_router.router, prefix=settings.API_V1_STR)
 app.include_router(business_router.router, prefix=settings.API_V1_STR)
 app.include_router(counter_router.router, prefix=settings.API_V1_STR)

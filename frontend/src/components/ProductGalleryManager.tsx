@@ -15,13 +15,13 @@ export interface GalleryImageItem {
 interface ProductGalleryManagerProps {
   images: GalleryImageItem[];
   onChange: (images: GalleryImageItem[]) => void;
-  folder?: string;
+  resourceId?: string | null;
 }
 
 export function ProductGalleryManager({
   images,
   onChange,
-  folder,
+  resourceId,
 }: ProductGalleryManagerProps) {
   const [uploadingCount, setUploadingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +29,11 @@ export function ProductGalleryManager({
 
   const handleFiles = async (files: FileList | File[]) => {
     setError(null);
+    if (!resourceId) {
+      setError('Please save the product first before adding photos.');
+      return;
+    }
+
     const validFiles = Array.from(files).filter((file) => {
       const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type)) {
@@ -47,7 +52,9 @@ export function ProductGalleryManager({
     setUploadingCount((prev) => prev + validFiles.length);
 
     try {
-      const uploadPromises = validFiles.map((file) => uploadToCloudinary(file, folder));
+      const uploadPromises = validFiles.map((file) =>
+        uploadToCloudinary(file, { resourceType: 'product', resourceId })
+      );
       const results = await Promise.all(uploadPromises);
 
       let currentImages = [...images];

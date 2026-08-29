@@ -23,7 +23,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ProductGalleryManager, GalleryImageItem } from '@/components/ProductGalleryManager';
 import { QuickCategoryModal } from '@/components/QuickCategoryModal';
-import { getOptimizedImageUrl, getProductCloudinaryFolder, slugify } from '@/lib/cloudinary';
+import { getOptimizedImageUrl } from '@/lib/cloudinary';
 import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function ProductsPage() {
@@ -659,7 +659,7 @@ export default function ProductsPage() {
                 <ProductGalleryManager
                   images={galleryImages}
                   onChange={setGalleryImages}
-                  folder={getProductCloudinaryFolder(me?.business?.id, name || 'new-product')}
+                  resourceId={editingProduct?.id}
                 />
               </div>
 

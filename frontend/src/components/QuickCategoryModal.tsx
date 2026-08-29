@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import { X, Layers, Loader2 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
-import { ImageUploadDropzone } from './ImageUploadDropzone';
-import { getCategoryCloudinaryFolder } from '@/lib/cloudinary';
 import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface QuickCategoryModalProps {
@@ -22,7 +20,6 @@ export function QuickCategoryModal({
 }: QuickCategoryModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [imageData, setImageData] = useState<{ url: string; public_id: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useDialogAccessibility<HTMLDivElement>(isOpen, onClose);
@@ -42,15 +39,12 @@ export function QuickCategoryModal({
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
-          image_url: imageData?.url || undefined,
-          image_public_id: imageData?.public_id || undefined,
           is_active: true,
         }),
       });
 
       setName('');
       setDescription('');
-      setImageData(null);
       onSuccess(created);
       onClose();
     } catch (err: any) {
@@ -114,14 +108,6 @@ export function QuickCategoryModal({
               className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-medium text-black focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
             />
           </div>
-
-          <ImageUploadDropzone
-            value={imageData?.url}
-            publicId={imageData?.public_id}
-            onChange={setImageData}
-            folder={getCategoryCloudinaryFolder(businessId)}
-            label="Category Image (Optional)"
-          />
 
           {error && (
             <div role="alert" className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">

@@ -1,8 +1,4 @@
-export const CLOUDINARY_CONFIG = {
-  cloudName: 'echlwce1',
-  uploadPreset: 'krishna_furniture_uploads',
-  uploadEndpoint: 'https://api.cloudinary.com/v1_1/echlwce1/image/upload',
-};
+import { fetchApi } from './api';
 
 export interface CloudinaryUploadResult {
   secure_url: string;
@@ -18,22 +14,20 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '') || 'item';
 }
 
-export function getProductCloudinaryFolder(businessId: string, productSlugOrName: string): string {
-  const cleanBiz = businessId || 'default';
-  const cleanSlug = slugify(productSlugOrName);
-  return `woodex/${cleanBiz}/products/${cleanSlug}`;
-}
-
-export function getCategoryCloudinaryFolder(businessId: string): string {
-  const cleanBiz = businessId || 'default';
-  return `woodex/${cleanBiz}/categories`;
+export interface UploadResourceTarget {
+  resourceType: 'product' | 'category';
+  resourceId: string;
 }
 
 export async function uploadToCloudinary(
   file: File,
-  folder?: string,
+  target: UploadResourceTarget,
   onProgress?: (percent: number) => void
 ): Promise<CloudinaryUploadResult> {
+  if (!target || !target.resourceId) {
+    throw new Error('Resource ID is required to upload an image. Please save the item first.');
+  }
+
   // Validate file type
   const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (!validTypes.includes(file.type)) {
@@ -48,14 +42,21 @@ export async function uploadToCloudinary(
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-  if (folder) {
-    formData.append('folder', folder);
-  }
+  const signing = await fetchApi('/image-uploads/signature', {
+    method: 'POST',
+    body: JSON.stringify({
+      resource_type: target.resourceType,
+      resource_id: target.resourceId,
+    }),
+  });
+  formData.append('api_key', signing.api_key);
+  formData.append('timestamp', String(signing.timestamp));
+  formData.append('signature', signing.signature);
+  formData.append('folder', signing.folder);
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', CLOUDINARY_CONFIG.uploadEndpoint);
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${encodeURIComponent(signing.cloud_name)}/image/upload`);
 
     if (xhr.upload && onProgress) {
       xhr.upload.onprogress = (e) => {
