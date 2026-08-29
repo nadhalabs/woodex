@@ -49,7 +49,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       {feedback && (
         <div
           role={feedback.kind === 'error' ? 'alert' : 'status'}
-          aria-live="polite"
+          aria-live={feedback.kind === 'error' ? 'assertive' : 'polite'}
+          aria-atomic="true"
           className={`fixed top-4 right-4 left-4 sm:left-auto z-[100] sm:w-[380px] rounded-xl border px-4 py-3 shadow-2xl flex items-start gap-3 ${
             feedback.kind === 'error'
               ? 'bg-red-50 border-red-200 text-red-950'

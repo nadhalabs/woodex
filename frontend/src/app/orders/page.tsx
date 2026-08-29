@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SpecDrawer } from '@/components/SpecDrawer';
 import { PrintInvoiceModal } from '@/components/PrintInvoiceModal';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function OrdersPage() {
   const [me, setMe] = useState<any>(null);
@@ -50,6 +51,8 @@ export default function OrdersPage() {
 
   const [saving, setSaving] = useState(false);
   const [actionOrderId, setActionOrderId] = useState<string | null>(null);
+  const paymentDialogRef = useDialogAccessibility<HTMLDivElement>(Boolean(payingOrder), () => setPayingOrder(null));
+  const createOrderDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -203,7 +206,7 @@ export default function OrdersPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Orders Management</h1>
@@ -212,7 +215,7 @@ export default function OrdersPage() {
 
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Create New Order</span>
@@ -224,7 +227,7 @@ export default function OrdersPage() {
             {orders.map((ord) => (
               <div
                 key={ord.id}
-                className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-2xs hover:border-black hover:shadow-md transition flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                className="bg-white rounded-2xl p-4 sm:p-6 border border-zinc-200 shadow-2xs hover:border-black hover:shadow-md transition flex flex-col lg:flex-row lg:items-center justify-between gap-6"
               >
                 {/* Order Details */}
                 <div className="space-y-2 flex-1">
@@ -258,8 +261,8 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Amount & Balance */}
-                <div className="flex items-center gap-6 border-t lg:border-t-0 lg:border-l border-zinc-200 pt-4 lg:pt-0 lg:pl-6">
-                  <div className="text-right">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 border-t lg:border-t-0 lg:border-l border-zinc-200 pt-4 lg:pt-0 lg:pl-6">
+                  <div className="text-left sm:text-right">
                     <div className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest">Total Amount</div>
                     <div className="text-xl font-black text-black">₹{ord.total_amount?.toLocaleString('en-IN')}</div>
                     <div className="text-xs text-zinc-600 font-medium">Advance: ₹{ord.advance_amount?.toLocaleString('en-IN')}</div>
@@ -337,10 +340,10 @@ export default function OrdersPage() {
       {/* Record Payment Modal */}
       {payingOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-zinc-300">
+          <div ref={paymentDialogRef} role="dialog" aria-modal="true" aria-labelledby="record-payment-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-black text-base uppercase tracking-tight">Record Payment — {payingOrder.order_number}</h3>
-              <button onClick={() => setPayingOrder(null)} className="text-zinc-400 hover:text-black">
+              <h3 id="record-payment-title" className="font-black text-black text-base uppercase tracking-tight">Record Payment — {payingOrder.order_number}</h3>
+              <button type="button" onClick={() => setPayingOrder(null)} aria-label="Close record payment dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -358,10 +361,12 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="order-payment-amount" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Payment Amount (₹) *
                 </label>
                 <input
+                  id="order-payment-amount"
+                  data-autofocus
                   type="number"
                   required
                   min={1}
@@ -373,10 +378,11 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="order-payment-method" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Payment Method *
                 </label>
                 <select
+                  id="order-payment-method"
                   value={payMethod}
                   onChange={(e) => setPayMethod(e.target.value)}
                   className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-semibold text-black focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
@@ -390,10 +396,11 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="order-payment-reference" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Reference / Transaction ID
                 </label>
                 <input
+                  id="order-payment-reference"
                   type="text"
                   value={payRef}
                   onChange={(e) => setPayRef(e.target.value)}
@@ -402,18 +409,18 @@ export default function OrdersPage() {
                 />
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => setPayingOrder(null)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPayment}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
                 >
                   {submittingPayment ? 'Saving...' : 'Record Payment'}
                 </button>
@@ -426,21 +433,23 @@ export default function OrdersPage() {
       {/* Create Order Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
+          <div ref={createOrderDialogRef} role="dialog" aria-modal="true" aria-labelledby="create-order-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
-              <h3 className="font-black text-lg text-black uppercase tracking-tight">Create New Furniture Order</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="create-order-title" className="font-black text-lg text-black uppercase tracking-tight">Create New Furniture Order</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close create order dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateOrder} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="order-customer" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Select Customer *
                   </label>
                   <select
+                    id="order-customer"
+                    data-autofocus
                     required
                     value={customerId}
                     onChange={(e) => setCustomerId(e.target.value)}
@@ -455,10 +464,11 @@ export default function OrdersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="order-delivery-date" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Expected Delivery Date
                   </label>
                   <input
+                    id="order-delivery-date"
                     type="date"
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
@@ -485,8 +495,9 @@ export default function OrdersPage() {
 
                 <div className="space-y-2">
                   {items.map((row, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200">
+                    <div key={idx} className="grid grid-cols-2 sm:flex sm:items-center gap-2 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200">
                       <select
+                        aria-label={`Product for item ${idx + 1}`}
                         value={row.product_id}
                         onChange={(e) => handleProductSelect(idx, e.target.value)}
                         className="flex-1 px-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-xs font-medium text-black"
@@ -500,6 +511,7 @@ export default function OrdersPage() {
                       </select>
 
                       <input
+                        aria-label={`Description for item ${idx + 1}`}
                         type="text"
                         placeholder="Description"
                         value={row.product_name}
@@ -512,6 +524,7 @@ export default function OrdersPage() {
                       />
 
                       <input
+                        aria-label={`Quantity for item ${idx + 1}`}
                         type="number"
                         min={1}
                         placeholder="Qty"
@@ -525,6 +538,7 @@ export default function OrdersPage() {
                       />
 
                       <input
+                        aria-label={`Rate for item ${idx + 1}`}
                         type="number"
                         placeholder="Rate ₹"
                         value={row.unit_price}
@@ -540,6 +554,7 @@ export default function OrdersPage() {
                         <button
                           type="button"
                           onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                          aria-label={`Remove item ${idx + 1}`}
                           className="p-1.5 text-zinc-400 hover:text-black"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -551,12 +566,13 @@ export default function OrdersPage() {
               </div>
 
               {/* Advance Amount */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="order-advance" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Advance Payment Booking Amount (₹)
                   </label>
                   <input
+                    id="order-advance"
                     type="number"
                     value={advanceAmount}
                     onChange={(e) => setAdvanceAmount(Number(e.target.value))}
@@ -565,10 +581,11 @@ export default function OrdersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="order-delivery-address" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Delivery Address
                   </label>
                   <input
+                    id="order-delivery-address"
                     type="text"
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -585,8 +602,9 @@ export default function OrdersPage() {
                   <span>Custom Furniture Specs (Optional)</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
+                    aria-label="Furniture dimensions"
                     type="text"
                     placeholder="Dimensions (e.g. 72in x 36in x 30in)"
                     value={dimensions}
@@ -594,6 +612,7 @@ export default function OrdersPage() {
                     className="px-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-xs text-black"
                   />
                   <input
+                    aria-label="Wood material"
                     type="text"
                     placeholder="Wood Material (e.g. Burma Teak)"
                     value={woodType}
@@ -602,8 +621,9 @@ export default function OrdersPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
+                    aria-label="Color and polish finish"
                     type="text"
                     placeholder="Color & Polish Finish (e.g. Dark Walnut)"
                     value={colorFinish}
@@ -611,6 +631,7 @@ export default function OrdersPage() {
                     className="px-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-xs text-black"
                   />
                   <input
+                    aria-label="Fabric or upholstery"
                     type="text"
                     placeholder="Fabric / Upholstery (e.g. Velvet)"
                     value={fabric}
@@ -620,18 +641,18 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-zinc-200 flex items-center gap-3">
+              <div className="pt-4 border-t border-zinc-200 flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md"
                 >
                   {saving ? 'Creating...' : 'Book Order'}
                 </button>

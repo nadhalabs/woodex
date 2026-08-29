@@ -7,6 +7,7 @@ import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function SuppliersPage() {
   const [me, setMe] = useState<any>(null);
@@ -21,6 +22,7 @@ export default function SuppliersPage() {
   const [gstin, setGstin] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const supplierDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -76,7 +78,7 @@ export default function SuppliersPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Supplier Directory</h1>
@@ -86,7 +88,7 @@ export default function SuppliersPage() {
             {isStandard && canManageSuppliers && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Supplier</span>
@@ -145,20 +147,22 @@ export default function SuppliersPage() {
       {/* Add Supplier Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div ref={supplierDialogRef} role="dialog" aria-modal="true" aria-labelledby="supplier-dialog-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-black text-lg uppercase tracking-tight">Add New Supplier</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="supplier-dialog-title" className="font-black text-black text-lg uppercase tracking-tight">Add New Supplier</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close add supplier dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateSupplier} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="supplier-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Supplier / Vendor Name *
                 </label>
                 <input
+                  id="supplier-name"
+                  data-autofocus
                   type="text"
                   required
                   value={name}
@@ -169,10 +173,11 @@ export default function SuppliersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="supplier-phone" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Phone Number
                 </label>
                 <input
+                  id="supplier-phone"
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -182,10 +187,11 @@ export default function SuppliersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="supplier-gstin" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Vendor GSTIN
                 </label>
                 <input
+                  id="supplier-gstin"
                   type="text"
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value)}
@@ -195,10 +201,11 @@ export default function SuppliersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="supplier-address" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Address
                 </label>
                 <textarea
+                  id="supplier-address"
                   rows={2}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -206,18 +213,18 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Supplier'}
                 </button>

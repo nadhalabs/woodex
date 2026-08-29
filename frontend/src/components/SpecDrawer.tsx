@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Ruler, Trees, Palette, Sparkles, FileText } from 'lucide-react';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface SpecDrawerProps {
   isOpen: boolean;
@@ -11,22 +12,25 @@ interface SpecDrawerProps {
 }
 
 export function SpecDrawer({ isOpen, onClose, specs, orderNumber }: SpecDrawerProps) {
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(isOpen, onClose);
   if (!isOpen) return null;
 
   const data = specs || {};
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-xs">
-      <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 border-l border-zinc-300">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="spec-drawer-title" tabIndex={-1} className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 border-l border-zinc-300">
         <div>
           {/* Header */}
           <div className="p-6 bg-black text-white flex items-center justify-between border-b border-zinc-800">
             <div>
               <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">Custom Furniture Order</span>
-              <h3 className="text-xl font-black text-white tracking-tight">Custom Specs — {orderNumber || 'Order'}</h3>
+              <h3 id="spec-drawer-title" className="text-xl font-black text-white tracking-tight">Custom Specs — {orderNumber || 'Order'}</h3>
             </div>
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close custom specifications"
               className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition"
             >
               <X className="w-6 h-6" />
@@ -105,6 +109,7 @@ export function SpecDrawer({ isOpen, onClose, specs, orderNumber }: SpecDrawerPr
 
         <div className="p-4 border-t border-zinc-200 bg-zinc-50">
           <button
+            type="button"
             onClick={onClose}
             className="w-full bg-black text-white font-extrabold py-2.5 rounded-xl hover:bg-zinc-800 transition text-xs uppercase tracking-wider"
           >

@@ -6,7 +6,7 @@ import { fetchApi } from '@/lib/api';
 import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function CustomersPage() {
   const [me, setMe] = useState<any>(null);
@@ -21,7 +21,7 @@ export default function CustomersPage() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  useEscapeKey(isAddModalOpen && !saving, () => setIsAddModalOpen(false));
+  const addCustomerDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadCustomers() {
     try {
@@ -75,7 +75,7 @@ export default function CustomersPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           {/* Top Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -98,6 +98,7 @@ export default function CustomersPage() {
               <Search className="w-4 h-4" />
             </div>
             <input
+              aria-label="Search customers"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -166,22 +167,23 @@ export default function CustomersPage() {
       {/* Add Customer Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="add-customer-title" className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
+          <div ref={addCustomerDialogRef} role="dialog" aria-modal="true" aria-labelledby="add-customer-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
               <h3 id="add-customer-title" className="font-black text-lg text-black uppercase tracking-tight">Add New Customer</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close add customer dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="customer-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Full Customer Name *
                 </label>
                 <input
+                  id="customer-name"
+                  data-autofocus
                   type="text"
-                  autoFocus
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -191,10 +193,11 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="customer-phone" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Phone Number *
                 </label>
                 <input
+                  id="customer-phone"
                   type="text"
                   required
                   value={phone}
@@ -205,10 +208,11 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="customer-address" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Delivery Address
                 </label>
                 <textarea
+                  id="customer-address"
                   rows={2}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -218,10 +222,11 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="customer-notes" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Notes & Preferences
                 </label>
                 <input
+                  id="customer-notes"
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}

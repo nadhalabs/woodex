@@ -68,8 +68,10 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
       <div className="flex items-center gap-3">
         {/* Enlarge Screen / Fullscreen Button */}
         <button
+          type="button"
           onClick={toggleFullscreen}
           title={isFullscreen ? 'Exit fullscreen mode' : 'Enlarge screen / Fullscreen mode'}
+          aria-label={isFullscreen ? 'Exit fullscreen mode' : 'Enter fullscreen mode'}
           className="hidden sm:flex p-2 text-zinc-700 hover:text-black hover:bg-zinc-100 rounded-xl transition cursor-pointer items-center gap-1.5 text-xs font-semibold border border-zinc-200 shadow-2xs"
         >
           {isFullscreen ? (
@@ -98,8 +100,10 @@ export function Header({ userName, userRole, businessName, businessPlan }: Heade
 
         {/* Logout Button */}
         <button
+          type="button"
           onClick={handleLogout}
           title="Sign Out"
+          aria-label="Sign out"
           className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition cursor-pointer"
         >
           <LogOut className="w-4 h-4" />

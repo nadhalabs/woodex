@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Printer, Download, CheckCircle2 } from 'lucide-react';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface PrintInvoiceModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface PrintInvoiceModalProps {
 }
 
 export function PrintInvoiceModal({ isOpen, onClose, invoice, order, business }: PrintInvoiceModalProps) {
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(isOpen, onClose);
   if (!isOpen || (!invoice && !order)) return null;
 
   const inv = invoice || {};
@@ -46,17 +48,18 @@ export function PrintInvoiceModal({ isOpen, onClose, invoice, order, business }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-zinc-300 overflow-hidden my-8">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="print-invoice-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-zinc-300 overflow-hidden my-4 sm:my-8 max-h-[92vh] flex flex-col">
         {/* Action bar (hidden during print) */}
-        <div className="bg-black text-white p-4 flex items-center justify-between no-print border-b border-zinc-800">
+        <div className="bg-black text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print border-b border-zinc-800">
           <div className="flex items-center gap-2.5">
             <Printer className="w-5 h-5 text-white" />
-            <span className="font-bold text-base tracking-tight">
+            <span id="print-invoice-title" className="font-bold text-sm sm:text-base tracking-tight">
               {inv.invoice_number ? `Tax Invoice — ${inv.invoice_number}` : `Order Receipt — ${ord.order_number}`}
             </span>
           </div>
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={handlePrint}
               className="flex items-center gap-2 bg-white hover:bg-zinc-200 text-black font-extrabold px-4 py-2 rounded-xl transition text-xs uppercase tracking-wider cursor-pointer shadow-sm"
             >
@@ -64,7 +67,9 @@ export function PrintInvoiceModal({ isOpen, onClose, invoice, order, business }:
               <span>Print Invoice</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close invoice preview"
               className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -73,7 +78,7 @@ export function PrintInvoiceModal({ isOpen, onClose, invoice, order, business }:
         </div>
 
         {/* Printable Document Sheet */}
-        <div className="p-8 sm:p-12 text-zinc-900 bg-white" id="printable-invoice">
+        <div className="p-4 sm:p-12 text-zinc-900 bg-white overflow-y-auto" id="printable-invoice">
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-black pb-6">
             <div>
@@ -144,8 +149,8 @@ export function PrintInvoiceModal({ isOpen, onClose, invoice, order, business }:
           </div>
 
           {/* Items Table */}
-          <div className="py-6">
-            <table className="w-full text-left border-collapse">
+          <div className="py-6 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left border-collapse">
               <thead>
                 <tr className="border-b-2 border-black text-xs font-black uppercase tracking-wider text-black">
                   <th className="py-2.5">Item Description</th>

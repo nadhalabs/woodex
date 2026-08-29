@@ -23,6 +23,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ImageUploadDropzone } from '@/components/ImageUploadDropzone';
 import { getOptimizedImageUrl, getCategoryCloudinaryFolder } from '@/lib/cloudinary';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function CategoriesPage() {
   const [me, setMe] = useState<any>(null);
@@ -48,6 +49,11 @@ export default function CategoriesPage() {
   const [targetCategoryId, setTargetCategoryId] = useState<string>('');
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const categoryDialogRef = useDialogAccessibility<HTMLDivElement>(Boolean(isAddModalOpen || editingCategory), () => {
+    setIsAddModalOpen(false);
+    setEditingCategory(null);
+  });
+  const deleteDialogRef = useDialogAccessibility<HTMLDivElement>(Boolean(deletingCategory), () => setDeletingCategory(null));
 
   async function loadData() {
     try {
@@ -230,7 +236,7 @@ export default function CategoriesPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           {/* Header & Tabs */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -238,10 +244,10 @@ export default function CategoriesPage() {
               <p className="text-xs text-zinc-500">Configure catalogue categories, covers, and item collections</p>
             </div>
 
-            {canManageCategories && <div className="flex items-center gap-3">
+            {canManageCategories && <div className="flex w-full sm:w-auto items-center gap-3">
               <button
                 onClick={openAddModal}
-                className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Add Category</span>
@@ -269,6 +275,7 @@ export default function CategoriesPage() {
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
               <input
+                aria-label="Search categories"
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -285,7 +292,7 @@ export default function CategoriesPage() {
           {/* Categories Table / Grid */}
           <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-600">
+              <table className="w-full min-w-[760px] text-left text-sm text-zinc-600">
                 <thead className="bg-zinc-50 text-black text-[10px] uppercase font-black tracking-widest border-b border-zinc-200">
                   <tr>
                     <th className="py-3.5 px-4 w-16 text-center">Order</th>
@@ -308,6 +315,7 @@ export default function CategoriesPage() {
                             onClick={() => handleMoveOrder(idx, 'up')}
                             className="p-1 text-zinc-400 hover:text-black disabled:opacity-20 rounded hover:bg-zinc-100"
                             title="Move up"
+                            aria-label={`Move ${cat.name} up`}
                           >
                             <ArrowUp className="w-3.5 h-3.5" />
                           </button>
@@ -318,6 +326,7 @@ export default function CategoriesPage() {
                             onClick={() => handleMoveOrder(idx, 'down')}
                             className="p-1 text-zinc-400 hover:text-black disabled:opacity-20 rounded hover:bg-zinc-100"
                             title="Move down"
+                            aria-label={`Move ${cat.name} down`}
                           >
                             <ArrowDown className="w-3.5 h-3.5" />
                           </button>
@@ -383,6 +392,7 @@ export default function CategoriesPage() {
                             onClick={() => openEditModal(cat)}
                             className="p-1.5 text-zinc-600 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
                             title="Edit Category"
+                            aria-label={`Edit ${cat.name}`}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -390,6 +400,7 @@ export default function CategoriesPage() {
                             onClick={() => openDeleteDialog(cat)}
                             className="p-1.5 text-zinc-400 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
                             title="Delete Category"
+                            aria-label={`Delete ${cat.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -415,16 +426,18 @@ export default function CategoriesPage() {
       {/* Add / Edit Category Modal */}
       {(isAddModalOpen || editingCategory) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-zinc-300">
+          <div ref={categoryDialogRef} role="dialog" aria-modal="true" aria-labelledby="category-dialog-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-lg text-black uppercase tracking-tight">
+              <h3 id="category-dialog-title" className="font-black text-lg text-black uppercase tracking-tight">
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setIsAddModalOpen(false);
                   setEditingCategory(null);
                 }}
+                aria-label="Close category dialog"
                 className="text-zinc-400 hover:text-black"
               >
                 <X className="w-5 h-5" />
@@ -433,10 +446,12 @@ export default function CategoriesPage() {
 
             <form onSubmit={handleSaveCategory} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="category-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Category Name *
                 </label>
                 <input
+                  id="category-name"
+                  data-autofocus
                   type="text"
                   required
                   value={formName}
@@ -447,10 +462,11 @@ export default function CategoriesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="category-description" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Description
                 </label>
                 <textarea
+                  id="category-description"
                   rows={2}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -482,26 +498,26 @@ export default function CategoriesPage() {
               </div>
 
               {formError && (
-                <div className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
+                <div role="alert" className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
                   {formError}
                 </div>
               )}
 
-              <div className="pt-3 border-t border-zinc-200 flex items-center gap-3">
+              <div className="pt-3 border-t border-zinc-200 flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setIsAddModalOpen(false);
                     setEditingCategory(null);
                   }}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formSaving || !formName.trim()}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {formSaving ? (
                     <>
@@ -521,14 +537,16 @@ export default function CategoriesPage() {
       {/* Safe Delete Category Modal */}
       {deletingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-category-title" aria-describedby="delete-category-description" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
               <div className="flex items-center gap-2 text-black">
                 <AlertTriangle className="w-5 h-5 text-black" />
-                <h3 className="font-black text-lg text-black uppercase tracking-tight">Delete Category</h3>
+                <h3 id="delete-category-title" className="font-black text-lg text-black uppercase tracking-tight">Delete Category</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setDeletingCategory(null)}
+                aria-label="Close delete category dialog"
                 className="text-zinc-400 hover:text-black"
               >
                 <X className="w-5 h-5" />
@@ -536,7 +554,7 @@ export default function CategoriesPage() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-sm text-zinc-700">
+              <p id="delete-category-description" className="text-sm text-zinc-700">
                 Are you sure you want to delete the category <span className="font-bold text-black">"{deletingCategory.name}"</span>?
               </p>
 
@@ -600,16 +618,17 @@ export default function CategoriesPage() {
               )}
 
               {deleteError && (
-                <div className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
+                <div role="alert" className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
                   {deleteError}
                 </div>
               )}
 
-              <div className="pt-3 border-t border-zinc-200 flex items-center gap-3">
+              <div className="pt-3 border-t border-zinc-200 flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setDeletingCategory(null)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  data-autofocus
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
@@ -617,7 +636,7 @@ export default function CategoriesPage() {
                   type="button"
                   disabled={deleteSubmitting}
                   onClick={handleDeleteCategory}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {deleteSubmitting ? (
                     <>

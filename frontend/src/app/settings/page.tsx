@@ -98,7 +98,7 @@ export default function SettingsPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-4xl w-full mx-auto space-y-8">
+        <main className="p-4 sm:p-8 max-w-4xl w-full mx-auto space-y-8">
           <div>
             <h1 className="text-2xl font-black text-black tracking-tight">Store & Billing Settings</h1>
             <p className="text-xs text-zinc-500">Business details, Counter POS defaults, GST settings & WOODEX edition preferences</p>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
           <form onSubmit={handleSave}>
             <fieldset disabled={!canEditSettings} className="space-y-6 disabled:opacity-70">
             {/* SECTION 1: BUSINESS STORE DETAILS */}
-            <div className="bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs space-y-6">
+            <div className="bg-white rounded-2xl p-4 sm:p-8 border border-zinc-200 shadow-2xs space-y-6">
               <div className="flex items-center justify-between pb-6 border-b border-zinc-100">
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-xl bg-zinc-100 text-black">
@@ -129,10 +129,11 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-business-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Business Store Name *
                   </label>
                   <input
+                    id="settings-business-name"
                     type="text"
                     required
                     value={name}
@@ -142,10 +143,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-phone" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Store Contact Phone
                   </label>
                   <input
+                    id="settings-phone"
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -154,10 +156,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-address" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Store Address
                   </label>
                   <textarea
+                    id="settings-address"
                     rows={2}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -166,10 +169,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-gstin" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Store GSTIN Number
                   </label>
                   <input
+                    id="settings-gstin"
                     type="text"
                     value={gstin}
                     onChange={(e) => setGstin(e.target.value)}
@@ -180,10 +184,11 @@ export default function SettingsPage() {
 
                 {/* WOODEX Plan Selector */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-plan" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     WOODEX Subscription Edition *
                   </label>
                   <select
+                    id="settings-plan"
                     value={plan}
                     onChange={(e) => setPlan(e.target.value)}
                     className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-bold text-black focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
@@ -196,7 +201,7 @@ export default function SettingsPage() {
             </div>
 
             {/* SECTION 2: COUNTER & BILLING DEFAULTS */}
-            <div className="bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs space-y-6">
+            <div className="bg-white rounded-2xl p-4 sm:p-8 border border-zinc-200 shadow-2xs space-y-6">
               <div className="flex items-center gap-3 pb-6 border-b border-zinc-100">
                 <div className="p-3 rounded-xl bg-zinc-100 text-black">
                   <Receipt className="w-6 h-6" />
@@ -209,10 +214,11 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-invoice-prefix" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Invoice Prefix
                   </label>
                   <input
+                    id="settings-invoice-prefix"
                     type="text"
                     value={invoicePrefix}
                     onChange={(e) => setInvoicePrefix(e.target.value)}
@@ -223,10 +229,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-order-prefix" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Order Prefix
                   </label>
                   <input
+                    id="settings-order-prefix"
                     type="text"
                     value={orderPrefix}
                     onChange={(e) => setOrderPrefix(e.target.value)}
@@ -237,10 +244,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-tax-rate" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Default GST Rate (%)
                   </label>
                   <input
+                    id="settings-tax-rate"
                     type="number"
                     min={0}
                     step={0.5}
@@ -273,10 +281,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
+                  <label htmlFor="settings-invoice-footer" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Invoice Footer / Terms Note
                   </label>
                   <textarea
+                    id="settings-invoice-footer"
                     rows={2}
                     value={invoiceFooter}
                     onChange={(e) => setInvoiceFooter(e.target.value)}
@@ -286,11 +295,11 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-zinc-100 flex justify-end">
+              <div className="pt-6 border-t border-zinc-100 flex justify-stretch sm:justify-end">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-6 py-3 rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-6 py-3 rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
                 >
                   <Save className="w-4 h-4" />
                   <span>{saving ? 'Saving Changes...' : 'Save Store & Billing Settings'}</span>

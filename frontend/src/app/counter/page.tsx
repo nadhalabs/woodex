@@ -41,6 +41,7 @@ import { QuickCustomerModal } from '@/components/QuickCustomerModal';
 import { CounterOrderLookupModal } from '@/components/CounterOrderLookupModal';
 import { PrintInvoiceModal } from '@/components/PrintInvoiceModal';
 import { getOptimizedImageUrl } from '@/lib/cloudinary';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface CartItem {
   product_id?: string;
@@ -116,6 +117,7 @@ export default function CounterPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<HTMLInputElement>(null);
   const paidInputRef = useRef<HTMLInputElement>(null);
+  const heldBillsDialogRef = useDialogAccessibility<HTMLDivElement>(isHeldBillsDrawerOpen, () => setIsHeldBillsDrawerOpen(false));
 
   // Initial Data Load
   async function loadInitialData() {
@@ -491,6 +493,7 @@ export default function CounterPage() {
                   <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
                   <input
                     ref={searchInputRef}
+                    aria-label="Search products"
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -499,7 +502,9 @@ export default function CounterPage() {
                   />
                   {search && (
                     <button
+                      type="button"
                       onClick={() => setSearch('')}
+                      aria-label="Clear product search"
                       className="absolute right-3 top-2.5 text-zinc-400 hover:text-black"
                     >
                       <X className="w-4 h-4" />
@@ -561,7 +566,7 @@ export default function CounterPage() {
 
             {/* Products Grid */}
             <div className="flex-1 overflow-y-auto p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
                 {filteredProducts.map((p) => {
                   const isOut = p.current_stock <= 0;
                   const isLow = p.current_stock > 0 && p.current_stock <= (p.low_stock_level || 2);
@@ -624,6 +629,11 @@ export default function CounterPage() {
                         <button
                           type="button"
                           disabled={isOut}
+                          aria-label={`Add ${p.name} to bill`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!isOut) addToCart(p);
+                          }}
                           className="bg-black hover:bg-zinc-800 disabled:bg-zinc-200 text-white p-1.5 rounded-lg shadow-xs transition"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -642,7 +652,7 @@ export default function CounterPage() {
             </div>
 
             {/* Bottom Keyboard Guide Strip */}
-            <div className="px-4 py-2 bg-white border-t border-zinc-200 flex items-center justify-between text-[11px] text-zinc-500 font-medium shrink-0">
+            <div className="hidden md:flex px-4 py-2 bg-white border-t border-zinc-200 items-center justify-between text-[11px] text-zinc-500 font-medium shrink-0">
               <div className="flex items-center gap-3">
                 <span><kbd className="bg-zinc-100 border border-zinc-300 rounded px-1.5 py-0.5 text-[10px] font-bold">/</kbd> Search</span>
                 <span><kbd className="bg-zinc-100 border border-zinc-300 rounded px-1.5 py-0.5 text-[10px] font-bold">F2</kbd> New Bill</span>
@@ -655,10 +665,10 @@ export default function CounterPage() {
           </div>
 
           {/* RIGHT COLUMN: CURRENT BILL & CHECKOUT PANEL */}
-          <div className="w-full md:w-[480px] lg:w-[520px] bg-white flex flex-col min-h-screen md:min-h-0 md:h-full overflow-hidden border-l border-zinc-200 shadow-xl">
+          <div className="w-full md:w-[480px] lg:w-[520px] bg-white flex flex-col md:min-h-0 md:h-full overflow-hidden border-l border-zinc-200 shadow-xl">
             {/* Header: Customer Selection Bar */}
             <div className="p-4 bg-black text-white border-b border-zinc-800 space-y-3 shrink-0">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Store className="w-4 h-4 text-white" />
                   <span className="font-black text-sm tracking-wider uppercase">ACTIVE BILLING COUNTER</span>
@@ -685,7 +695,7 @@ export default function CounterPage() {
               {selectedCustomer ? (
                 <div className="bg-zinc-900 rounded-xl p-3 border border-zinc-800 flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 block">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block">
                       Customer Selected
                     </span>
                     <div className="font-extrabold text-white text-sm flex items-center gap-2">
@@ -707,11 +717,12 @@ export default function CounterPage() {
                 </div>
               ) : (
                 <div className="relative">
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:flex items-center gap-2">
                     <div className="relative flex-1">
                       <User className="w-3.5 h-3.5 absolute left-3 top-2.5 text-zinc-400" />
                       <input
                         ref={customerSearchRef}
+                        aria-label="Search customers by name or phone"
                         type="text"
                         value={customerSearchQuery}
                         onFocus={() => setIsCustomerDropdownOpen(true)}
@@ -724,7 +735,9 @@ export default function CounterPage() {
                       />
                     </div>
                     <button
+                      type="button"
                       onClick={() => setIsQuickCustomerOpen(true)}
+                      aria-label="Add new customer"
                       className="p-1.5 bg-white text-black hover:bg-zinc-200 rounded-xl font-bold transition shadow-xs"
                       title="Add New Customer"
                     >
@@ -738,7 +751,7 @@ export default function CounterPage() {
                           address: '',
                         })
                       }
-                      className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap border border-zinc-800"
+                      className="col-span-2 sm:col-span-1 px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap border border-zinc-800"
                     >
                       Walk-in
                     </button>
@@ -748,14 +761,15 @@ export default function CounterPage() {
                   {isCustomerDropdownOpen && customerSearchQuery && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-zinc-200 z-50 max-h-48 overflow-y-auto text-black">
                       {filteredCustomers.slice(0, 8).map((c) => (
-                        <div
+                        <button
+                          type="button"
                           key={c.id}
                           onClick={() => {
                             setSelectedCustomer(c);
                             setIsCustomerDropdownOpen(false);
                             setCustomerSearchQuery('');
                           }}
-                          className="px-3.5 py-2 hover:bg-zinc-100 cursor-pointer border-b border-zinc-100 flex items-center justify-between text-xs"
+                          className="w-full px-3.5 py-2 hover:bg-zinc-100 cursor-pointer border-b border-zinc-100 flex items-center justify-between text-left text-xs"
                         >
                           <div>
                             <div className="font-bold text-black">{c.name}</div>
@@ -766,7 +780,7 @@ export default function CounterPage() {
                               Due: ₹{c.pending_balance}
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                       {filteredCustomers.length === 0 && (
                         <div className="p-3 text-center text-zinc-400 text-xs">
@@ -780,9 +794,10 @@ export default function CounterPage() {
 
               {/* Sale Type Selector */}
               <div className="flex bg-zinc-900 p-1 rounded-xl gap-1 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setSaleType('direct_sale')}
+                  <button
+                    type="button"
+                    onClick={() => setSaleType('direct_sale')}
+                    aria-pressed={saleType === 'direct_sale'}
                   className={`flex-1 py-1.5 rounded-lg transition ${
                     saleType === 'direct_sale'
                       ? 'bg-white text-black shadow-xs font-extrabold'
@@ -791,9 +806,10 @@ export default function CounterPage() {
                 >
                   Direct Sale (Immediate)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSaleType('customer_order')}
+                  <button
+                    type="button"
+                    onClick={() => setSaleType('customer_order')}
+                    aria-pressed={saleType === 'customer_order'}
                   className={`flex-1 py-1.5 rounded-lg transition ${
                     saleType === 'customer_order'
                       ? 'bg-white text-black shadow-xs font-extrabold'
@@ -817,6 +833,8 @@ export default function CounterPage() {
                     <button
                       type="button"
                       onClick={() => setCustomSpecsOpen(!customSpecsOpen)}
+                      aria-expanded={customSpecsOpen}
+                      aria-controls="counter-custom-specs"
                       className="text-black font-bold hover:underline flex items-center gap-1 text-[11px]"
                     >
                       <span>Custom Specs</span>
@@ -824,10 +842,11 @@ export default function CounterPage() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="block font-bold text-zinc-700 mb-0.5">Expected Delivery Date *</label>
+                      <label htmlFor="counter-delivery-date" className="block font-bold text-zinc-700 mb-0.5">Expected Delivery Date *</label>
                       <input
+                        id="counter-delivery-date"
                         type="date"
                         value={expectedDeliveryDate}
                         onChange={(e) => setExpectedDeliveryDate(e.target.value)}
@@ -836,8 +855,9 @@ export default function CounterPage() {
                     </div>
 
                     <div>
-                      <label className="block font-bold text-zinc-700 mb-0.5">Delivery Address</label>
+                      <label htmlFor="counter-delivery-address" className="block font-bold text-zinc-700 mb-0.5">Delivery Address</label>
                       <input
+                        id="counter-delivery-address"
                         type="text"
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -849,10 +869,11 @@ export default function CounterPage() {
 
                   {/* Collapsible Custom Specifications */}
                   {customSpecsOpen && (
-                    <div className="pt-2 border-t border-zinc-200 grid grid-cols-2 gap-2">
+                    <div id="counter-custom-specs" className="pt-2 border-t border-zinc-200 grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <label className="block font-semibold text-zinc-600 mb-0.5">Dimensions</label>
+                        <label htmlFor="counter-dimensions" className="block font-semibold text-zinc-600 mb-0.5">Dimensions</label>
                         <input
+                          id="counter-dimensions"
                           type="text"
                           placeholder="e.g. 6x3 ft / 78x72 in"
                           value={customSpecs.dimensions}
@@ -861,8 +882,9 @@ export default function CounterPage() {
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-zinc-600 mb-0.5">Wood / Timber Type</label>
+                        <label htmlFor="counter-wood-type" className="block font-semibold text-zinc-600 mb-0.5">Wood / Timber Type</label>
                         <input
+                          id="counter-wood-type"
                           type="text"
                           placeholder="e.g. Teak, Sheesham, Oak"
                           value={customSpecs.wood_type}
@@ -871,8 +893,9 @@ export default function CounterPage() {
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-zinc-600 mb-0.5">Wood Finish / Polish</label>
+                        <label htmlFor="counter-finish" className="block font-semibold text-zinc-600 mb-0.5">Wood Finish / Polish</label>
                         <input
+                          id="counter-finish"
                           type="text"
                           placeholder="e.g. Walnut Matte, Natural Gloss"
                           value={customSpecs.finish}
@@ -881,8 +904,9 @@ export default function CounterPage() {
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-zinc-600 mb-0.5">Fabric & Colour</label>
+                        <label htmlFor="counter-fabric" className="block font-semibold text-zinc-600 mb-0.5">Fabric & Colour</label>
                         <input
+                          id="counter-fabric"
                           type="text"
                           placeholder="e.g. Beige Suede / Grey Velvet"
                           value={customSpecs.fabric}
@@ -916,6 +940,7 @@ export default function CounterPage() {
                         </div>
                         <button
                           onClick={() => removeCartItem(idx)}
+                          aria-label={`Remove ${item.product_name} from bill`}
                           className="text-zinc-400 hover:text-black p-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -923,11 +948,12 @@ export default function CounterPage() {
                       </div>
 
                       {/* Quantity & Price Controls */}
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2 pt-1">
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => updateCartQty(idx, -1)}
+                            aria-label={`Decrease quantity of ${item.product_name}`}
                             className="p-1 rounded bg-white border border-zinc-300 hover:bg-zinc-100 text-black font-bold"
                           >
                             <Minus className="w-3 h-3" />
@@ -936,6 +962,7 @@ export default function CounterPage() {
                           <button
                             type="button"
                             onClick={() => updateCartQty(idx, 1)}
+                            aria-label={`Increase quantity of ${item.product_name}`}
                             className="p-1 rounded bg-white border border-zinc-300 hover:bg-zinc-100 text-black font-bold"
                           >
                             <Plus className="w-3 h-3" />
@@ -943,10 +970,11 @@ export default function CounterPage() {
                         </div>
 
                         {/* Unit Price input */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end min-[420px]:self-auto">
                           <span className="text-xs text-zinc-400">@ ₹</span>
                           <input
                             type="number"
+                            aria-label={`Unit price for ${item.product_name}`}
                             value={item.unit_price}
                             onChange={(e) => updateCartPrice(idx, Number(e.target.value))}
                             className="w-20 px-1.5 py-0.5 bg-white border border-zinc-300 rounded text-right text-xs font-semibold focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
@@ -972,7 +1000,7 @@ export default function CounterPage() {
               {cartItems.length > 0 && (
                 <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 text-xs space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <label className="font-bold text-zinc-700">Bill Discount:</label>
+                    <label htmlFor="counter-discount" className="font-bold text-zinc-700">Bill Discount:</label>
                     <div className="flex items-center gap-1">
                       <select
                         value={discountType}
@@ -983,6 +1011,7 @@ export default function CounterPage() {
                         <option value="percentage">Percent %</option>
                       </select>
                       <input
+                        id="counter-discount"
                         type="number"
                         min={0}
                         value={billDiscount}
@@ -993,9 +1022,10 @@ export default function CounterPage() {
                   </div>
 
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-200">
-                    <label className="font-bold text-zinc-700">GST / Tax:</label>
+                    <label htmlFor="counter-tax-rate" className="font-bold text-zinc-700">GST / Tax:</label>
                     <div className="flex items-center gap-2">
                       <select
+                        id="counter-tax-rate"
                         value={taxRate}
                         onChange={(e) => setTaxRate(Number(e.target.value))}
                         className="px-2 py-1 bg-white border border-zinc-300 rounded text-xs font-semibold"
@@ -1056,6 +1086,7 @@ export default function CounterPage() {
                       key={m}
                       type="button"
                       onClick={() => setPaymentMethod(m)}
+                      aria-pressed={paymentMethod === m}
                       className={`flex-1 py-1 rounded-lg uppercase transition ${
                         paymentMethod === m
                           ? 'bg-black text-white shadow-xs'
@@ -1071,7 +1102,7 @@ export default function CounterPage() {
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <div className="flex items-center justify-between text-[10px] font-extrabold uppercase text-zinc-500 mb-0.5">
-                      <span>Paid / Tendered (₹)</span>
+                      <label htmlFor="counter-paid-amount">Paid / Tendered (₹)</label>
                       <button
                         type="button"
                         onClick={setFullPayment}
@@ -1081,6 +1112,7 @@ export default function CounterPage() {
                       </button>
                     </div>
                     <input
+                      id="counter-paid-amount"
                       ref={paidInputRef}
                       type="number"
                       min={0}
@@ -1098,18 +1130,18 @@ export default function CounterPage() {
               </div>
 
               {checkoutError && (
-                <div className="p-2.5 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
+                <div role="alert" className="p-2.5 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
                   {checkoutError}
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-1">
                 <button
                   type="button"
                   disabled={checkingOut || cartItems.length === 0}
                   onClick={() => handleCheckout(false)}
-                  className="w-1/3 py-3 bg-zinc-100 hover:bg-zinc-200 text-black font-bold rounded-xl text-xs uppercase tracking-wider transition border border-zinc-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full sm:w-1/3 py-3 bg-zinc-100 hover:bg-zinc-200 text-black font-bold rounded-xl text-xs uppercase tracking-wider transition border border-zinc-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Save Only</span>
@@ -1119,7 +1151,7 @@ export default function CounterPage() {
                   type="button"
                   disabled={checkingOut || cartItems.length === 0}
                   onClick={() => handleCheckout(true)}
-                  className="w-2/3 py-3 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-widest transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-2/3 py-3 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-widest transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {checkingOut ? (
                     <>
@@ -1170,13 +1202,13 @@ export default function CounterPage() {
       {/* Held Bills Drawer / Modal */}
       {isHeldBillsDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div ref={heldBillsDialogRef} role="dialog" aria-modal="true" aria-labelledby="held-bills-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-black" />
-                <h3 className="font-black text-base text-black uppercase tracking-wider">Held Counter Bills</h3>
+                <h3 id="held-bills-title" className="font-black text-base text-black uppercase tracking-wider">Held Counter Bills</h3>
               </div>
-              <button onClick={() => setIsHeldBillsDrawerOpen(false)} className="text-zinc-400 hover:text-black">
+              <button type="button" onClick={() => setIsHeldBillsDrawerOpen(false)} aria-label="Close held bills dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>

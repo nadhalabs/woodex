@@ -15,7 +15,7 @@ import { fetchApi } from '@/lib/api';
 import { showError, showSuccess } from '@/lib/feedback';
 import { StatusBadge } from './StatusBadge';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface CounterOrderLookupModalProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export function CounterOrderLookupModal({
 
   // Print Modal
   const [isPrintOpen, setIsPrintOpen] = useState(false);
-  useEscapeKey(isOpen && !isPrintOpen, onClose);
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(isOpen && !isPrintOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -138,9 +138,9 @@ export function CounterOrderLookupModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-      <div role="dialog" aria-modal="true" aria-labelledby="counter-order-lookup-title" className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-zinc-300 overflow-hidden my-6 max-h-[90vh] flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="counter-order-lookup-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-zinc-300 overflow-hidden my-3 sm:my-6 max-h-[94vh] sm:max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="bg-black text-white p-4 px-6 flex items-center justify-between border-b border-zinc-800">
+        <div className="bg-black text-white p-4 sm:px-6 flex items-start justify-between gap-3 border-b border-zinc-800">
           <div className="flex items-center gap-2.5">
             <Receipt className="w-5 h-5 text-white" />
             <div>
@@ -148,20 +148,21 @@ export function CounterOrderLookupModal({
               <p className="text-xs text-zinc-400">Search customer orders, record installment payments, & reprint</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white rounded-lg cursor-pointer">
+          <button type="button" onClick={onClose} aria-label="Close order lookup dialog" className="p-1 text-zinc-400 hover:text-white rounded-lg cursor-pointer shrink-0">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex gap-2">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
               <input
+                aria-label="Search orders"
+                data-autofocus
                 type="text"
-                autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Order # (e.g. ORD-2026-000001), Customer Name, or Phone..."
@@ -186,10 +187,11 @@ export function CounterOrderLookupModal({
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
                 {searchResults.map((ord) => (
-                  <div
+                  <button
+                    type="button"
                     key={ord.id}
                     onClick={() => selectOrder(ord)}
-                    className="p-4 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 hover:border-black rounded-xl transition cursor-pointer flex flex-col justify-between space-y-2"
+                    className="p-4 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 hover:border-black rounded-xl transition cursor-pointer flex flex-col justify-between space-y-2 text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-sm text-black font-mono">{ord.order_number}</span>
@@ -203,7 +205,7 @@ export function CounterOrderLookupModal({
                       <span className="text-zinc-500">Total: ₹{ord.total_amount?.toLocaleString('en-IN')}</span>
                       <span className="font-black text-black">Due: ₹{ord.balance_amount?.toLocaleString('en-IN')}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -225,7 +227,7 @@ export function CounterOrderLookupModal({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setIsPrintOpen(true)}
                     className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer border border-zinc-700 uppercase tracking-wider"
@@ -311,7 +313,7 @@ export function CounterOrderLookupModal({
                       <form onSubmit={handleRecordPayment} className="space-y-3">
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                            <label htmlFor="lookup-payment-amount" className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                               Payment Amount (₹) *
                             </label>
                             <button
@@ -323,6 +325,7 @@ export function CounterOrderLookupModal({
                             </button>
                           </div>
                           <input
+                            id="lookup-payment-amount"
                             type="number"
                             required
                             min={1}
@@ -337,12 +340,13 @@ export function CounterOrderLookupModal({
                           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                             Payment Method *
                           </label>
-                          <div className="grid grid-cols-4 gap-1.5">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                             {['upi', 'cash', 'card', 'bank_transfer'].map((m) => (
                               <button
                                 key={m}
                                 type="button"
                                 onClick={() => setPayMethod(m)}
+                                aria-pressed={payMethod === m}
                                 className={`py-1.5 rounded-lg text-xs font-bold uppercase transition ${
                                   payMethod === m
                                     ? 'bg-black text-white shadow-xs'
@@ -356,10 +360,11 @@ export function CounterOrderLookupModal({
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                          <label htmlFor="lookup-payment-reference" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                             Reference / Txn ID
                           </label>
                           <input
+                            id="lookup-payment-reference"
                             type="text"
                             value={payReference}
                             onChange={(e) => setPayReference(e.target.value)}
@@ -369,7 +374,7 @@ export function CounterOrderLookupModal({
                         </div>
 
                         {paymentError && (
-                          <div className="p-2.5 bg-zinc-900 border border-zinc-700 text-white rounded-lg text-xs font-medium">
+                          <div role="alert" className="p-2.5 bg-zinc-900 border border-zinc-700 text-white rounded-lg text-xs font-medium">
                             {paymentError}
                           </div>
                         )}

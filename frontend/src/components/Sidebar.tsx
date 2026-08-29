@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 interface SidebarProps {
   businessPlan?: string;
@@ -37,6 +38,7 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
   const isStandard = businessPlan === 'standard';
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileNavRef = useDialogAccessibility<HTMLElement>(mobileOpen, () => setMobileOpen(false));
   const showLabels = mobileOpen || !collapsed;
 
   useEffect(() => {
@@ -83,6 +85,8 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
         type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
+        aria-expanded={mobileOpen}
+        aria-controls="primary-navigation"
         className="md:hidden fixed left-3 top-3 z-40 p-2.5 rounded-xl bg-black text-white shadow-xl no-print"
       >
         <Menu className="w-5 h-5" />
@@ -96,6 +100,12 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
         />
       )}
       <aside
+        ref={mobileNavRef}
+        id="primary-navigation"
+        role={mobileOpen ? 'dialog' : undefined}
+        aria-modal={mobileOpen ? 'true' : undefined}
+        aria-label="Primary navigation"
+        tabIndex={-1}
         className={`${
           collapsed ? 'md:w-20' : 'md:w-64'
         } w-64 bg-black text-zinc-300 flex flex-col h-screen fixed md:sticky top-0 left-0 border-r border-zinc-900 shadow-2xl transition-all duration-300 ease-in-out no-print shrink-0 z-50 ${
@@ -111,14 +121,16 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
           {showLabels && (
             <div className="overflow-hidden whitespace-nowrap">
               <h1 className="font-black text-lg tracking-wider text-white">WOODEX</h1>
-              <p className="text-[9px] text-zinc-400 font-bold tracking-widest uppercase">Luxury Atelier & Timber</p>
+              <p className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">Luxury Atelier & Timber</p>
             </div>
           )}
         </div>
 
         <button
+          type="button"
           onClick={toggleCollapsed}
           title={collapsed ? 'Enlarge screen / Expand sidebar' : 'Minimize sidebar (Enlarge screen)'}
+          aria-label={collapsed ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'}
           className="hidden md:block p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition cursor-pointer shrink-0"
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4 text-white" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -127,6 +139,7 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
           type="button"
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
+          data-autofocus
           className="md:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900"
         >
           <X className="w-5 h-5" />
@@ -180,7 +193,7 @@ export function Sidebar({ businessPlan = 'lite', userRole = 'staff' }: SidebarPr
                 Standard Modules
               </span>
               {!isStandard && (
-                <span className="text-[9px] bg-zinc-900 text-zinc-300 font-bold px-2 py-0.5 rounded border border-zinc-800 tracking-wider">
+                <span className="text-[10px] bg-zinc-900 text-zinc-300 font-bold px-2 py-0.5 rounded border border-zinc-800 tracking-wider">
                   PRO
                 </span>
               )}

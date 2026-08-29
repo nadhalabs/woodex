@@ -7,6 +7,7 @@ import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function QuotationsPage() {
   const [me, setMe] = useState<any>(null);
@@ -25,6 +26,7 @@ export default function QuotationsPage() {
   const [items, setItems] = useState<any[]>([{ product_id: '', product_name: '', quantity: 1, unit_price: 0 }]);
   const [saving, setSaving] = useState(false);
   const [actionQuotationId, setActionQuotationId] = useState<string | null>(null);
+  const quotationDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -150,7 +152,7 @@ export default function QuotationsPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Quotations</h1>
@@ -159,7 +161,7 @@ export default function QuotationsPage() {
 
             {canManageQuotations && <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
             >
               <FilePlus className="w-4 h-4" />
               <span>Create New Quotation</span>
@@ -169,7 +171,7 @@ export default function QuotationsPage() {
           {/* Quotations List */}
           <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full min-w-[800px] text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-50 text-black text-[10px] uppercase font-black tracking-widest border-b border-zinc-200">
                     <th className="px-6 py-3.5">Quotation #</th>
@@ -258,21 +260,23 @@ export default function QuotationsPage() {
       {/* Create Quotation Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
+          <div ref={quotationDialogRef} role="dialog" aria-modal="true" aria-labelledby="create-quotation-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-zinc-300 max-h-[94vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
-              <h3 className="font-black text-lg text-black uppercase tracking-tight">Create New Quotation</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="create-quotation-title" className="font-black text-lg text-black uppercase tracking-tight">Create New Quotation</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close create quotation dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateQuotation} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="quotation-customer" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Select Customer *
                   </label>
                   <select
+                    id="quotation-customer"
+                    data-autofocus
                     required
                     value={customerId}
                     onChange={(e) => setCustomerId(e.target.value)}
@@ -287,10 +291,11 @@ export default function QuotationsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="quotation-validity" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Validity Date
                   </label>
                   <input
+                    id="quotation-validity"
                     type="date"
                     value={validityDate}
                     onChange={(e) => setValidityDate(e.target.value)}
@@ -317,8 +322,9 @@ export default function QuotationsPage() {
 
                 <div className="space-y-2">
                   {items.map((row, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200">
+                    <div key={idx} className="grid grid-cols-2 sm:flex sm:items-center gap-2 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200">
                       <select
+                        aria-label={`Product for quotation item ${idx + 1}`}
                         value={row.product_id}
                         onChange={(e) => handleProductSelect(idx, e.target.value)}
                         className="flex-1 px-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-xs font-medium text-black"
@@ -332,6 +338,7 @@ export default function QuotationsPage() {
                       </select>
 
                       <input
+                        aria-label={`Description for quotation item ${idx + 1}`}
                         type="text"
                         placeholder="Item Description"
                         value={row.product_name}
@@ -344,6 +351,7 @@ export default function QuotationsPage() {
                       />
 
                       <input
+                        aria-label={`Quantity for quotation item ${idx + 1}`}
                         type="number"
                         min={1}
                         placeholder="Qty"
@@ -357,6 +365,7 @@ export default function QuotationsPage() {
                       />
 
                       <input
+                        aria-label={`Rate for quotation item ${idx + 1}`}
                         type="number"
                         placeholder="Rate ₹"
                         value={row.unit_price}
@@ -371,6 +380,7 @@ export default function QuotationsPage() {
                       <button
                         type="button"
                         onClick={() => removeItemRow(idx)}
+                        aria-label={`Remove quotation item ${idx + 1}`}
                         className="p-1.5 text-zinc-400 hover:text-black"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -380,12 +390,13 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="quotation-discount" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Discount (₹)
                   </label>
                   <input
+                    id="quotation-discount"
                     type="number"
                     value={discount}
                     onChange={(e) => setDiscount(Number(e.target.value))}
@@ -394,10 +405,11 @@ export default function QuotationsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="quotation-tax-rate" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     GST Tax Rate (%)
                   </label>
                   <input
+                    id="quotation-tax-rate"
                     type="number"
                     value={taxRate}
                     onChange={(e) => setTaxRate(Number(e.target.value))}
@@ -406,18 +418,18 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-zinc-200 flex items-center gap-3">
+              <div className="pt-4 border-t border-zinc-200 flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md"
                 >
                   {saving ? 'Creating...' : 'Save Quotation'}
                 </button>

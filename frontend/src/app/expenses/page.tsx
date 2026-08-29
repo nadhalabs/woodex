@@ -6,6 +6,7 @@ import { fetchApi } from '@/lib/api';
 import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function ExpensesPage() {
   const [me, setMe] = useState<any>(null);
@@ -22,6 +23,7 @@ export default function ExpensesPage() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const addExpenseDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -93,7 +95,7 @@ export default function ExpensesPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Expense Tracker</h1>
@@ -102,15 +104,17 @@ export default function ExpensesPage() {
 
             {canManageExpenses && <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Record New Expense</span>
             </button>}
           </div>
 
-          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-zinc-200 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-zinc-200 shadow-2xs">
+            <label htmlFor="expense-category-filter" className="sr-only">Filter expenses by category</label>
             <select
+              id="expense-category-filter"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-black uppercase tracking-wider focus:outline-none focus:border-black"
@@ -123,14 +127,14 @@ export default function ExpensesPage() {
               ))}
             </select>
 
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider sm:text-right">
               Total Listed Expenses: <span className="text-black font-black text-lg ml-1">₹{totalExpenses.toLocaleString('en-IN')}</span>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full min-w-[680px] text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-50 text-black text-[10px] uppercase font-black tracking-widest border-b border-zinc-200">
                     <th className="px-6 py-3.5">Date</th>
@@ -183,20 +187,22 @@ export default function ExpensesPage() {
       {/* Add Expense Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div ref={addExpenseDialogRef} role="dialog" aria-modal="true" aria-labelledby="add-expense-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-black text-lg uppercase tracking-tight">Record Expense</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="add-expense-title" className="font-black text-black text-lg uppercase tracking-tight">Record Expense</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close record expense dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateExpense} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="expense-category" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Expense Category *
                 </label>
                 <select
+                  id="expense-category"
+                  data-autofocus
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-semibold text-black focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
@@ -210,10 +216,11 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="expense-amount" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Amount (₹) *
                 </label>
                 <input
+                  id="expense-amount"
                   type="number"
                   required
                   min={1}
@@ -224,10 +231,11 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="expense-date" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Expense Date *
                 </label>
                 <input
+                  id="expense-date"
                   type="date"
                   required
                   value={date}
@@ -237,10 +245,11 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="expense-description" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Description / Details
                 </label>
                 <input
+                  id="expense-description"
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -249,18 +258,18 @@ export default function ExpensesPage() {
                 />
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Expense'}
                 </button>

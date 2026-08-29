@@ -7,6 +7,7 @@ import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function PurchasesPage() {
   const [me, setMe] = useState<any>(null);
@@ -23,6 +24,7 @@ export default function PurchasesPage() {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([{ product_id: '', product_name: '', quantity: 1, unit_price: 0 }]);
   const [saving, setSaving] = useState(false);
+  const purchaseDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -92,7 +94,7 @@ export default function PurchasesPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Purchase Orders</h1>
@@ -102,7 +104,7 @@ export default function PurchasesPage() {
             {isStandard && canManagePurchases && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Purchase Order</span>
@@ -121,7 +123,7 @@ export default function PurchasesPage() {
           {isStandard && (
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[680px] text-left border-collapse">
                   <thead>
                     <tr className="bg-zinc-50 text-black text-[10px] uppercase font-black tracking-widest border-b border-zinc-200">
                       <th className="px-6 py-3.5">PO #</th>
@@ -164,21 +166,23 @@ export default function PurchasesPage() {
       {/* Add Purchase Order Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-zinc-300">
+          <div ref={purchaseDialogRef} role="dialog" aria-modal="true" aria-labelledby="purchase-dialog-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-black text-lg uppercase tracking-tight">Create Purchase Order</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="purchase-dialog-title" className="font-black text-black text-lg uppercase tracking-tight">Create Purchase Order</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close purchase order dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreatePurchase} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="purchase-supplier" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Select Supplier *
                   </label>
                   <select
+                    id="purchase-supplier"
+                    data-autofocus
                     required
                     value={supplierId}
                     onChange={(e) => setSupplierId(e.target.value)}
@@ -193,10 +197,11 @@ export default function PurchasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="purchase-date" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Purchase Date *
                   </label>
                   <input
+                    id="purchase-date"
                     type="date"
                     required
                     value={purchaseDate}
@@ -207,11 +212,12 @@ export default function PurchasesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="purchase-product" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Product Item Received *
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 sm:flex gap-2">
                   <select
+                    id="purchase-product"
                     value={items[0]?.product_id}
                     onChange={(e) => {
                       const prod = products.find((p) => p.id === e.target.value);
@@ -229,6 +235,7 @@ export default function PurchasesPage() {
                     ))}
                   </select>
                   <input
+                    aria-label="Purchase quantity"
                     type="number"
                     min={1}
                     placeholder="Qty"
@@ -237,6 +244,7 @@ export default function PurchasesPage() {
                     className="w-20 px-3 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-bold text-center text-black"
                   />
                   <input
+                    aria-label="Purchase unit cost"
                     type="number"
                     placeholder="Cost ₹"
                     value={items[0]?.unit_price}
@@ -246,18 +254,18 @@ export default function PurchasesPage() {
                 </div>
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
                 >
                   {saving ? 'Creating...' : 'Receive Purchase'}
                 </button>

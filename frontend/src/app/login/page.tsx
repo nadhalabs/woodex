@@ -49,14 +49,14 @@ export default function LoginPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-zinc-950 py-8 px-5 shadow-2xl border border-zinc-800/90 sm:rounded-2xl sm:px-10">
           {error && (
-            <div className="mb-4 bg-zinc-900 border border-zinc-700 text-white p-3 rounded-xl text-xs font-semibold text-center">
+            <div role="alert" className="mb-4 bg-zinc-900 border border-zinc-700 text-white p-3 rounded-xl text-xs font-semibold text-center">
               {error}
             </div>
           )}
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-zinc-300 mb-1.5">
+              <label htmlFor="login-email" className="block text-[11px] font-black uppercase tracking-wider text-zinc-300 mb-1.5">
                 Email Address
               </label>
               <div className="relative">
@@ -64,6 +64,7 @@ export default function LoginPage() {
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={email}
@@ -75,7 +76,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-zinc-300 mb-1.5">
+              <label htmlFor="login-password" className="block text-[11px] font-black uppercase tracking-wider text-zinc-300 mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -83,6 +84,7 @@ export default function LoginPage() {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-password"
                   type="password"
                   required
                   value={password}

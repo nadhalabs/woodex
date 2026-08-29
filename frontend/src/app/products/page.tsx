@@ -24,6 +24,7 @@ import { Header } from '@/components/Header';
 import { ProductGalleryManager, GalleryImageItem } from '@/components/ProductGalleryManager';
 import { QuickCategoryModal } from '@/components/QuickCategoryModal';
 import { getOptimizedImageUrl, getProductCloudinaryFolder, slugify } from '@/lib/cloudinary';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function ProductsPage() {
   const [me, setMe] = useState<any>(null);
@@ -62,6 +63,9 @@ export default function ProductsPage() {
   const [adjustingStock, setAdjustingStock] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const productDialogRef = useDialogAccessibility<HTMLDivElement>(isProductModalOpen && !isQuickCategoryOpen, () => setIsProductModalOpen(false));
+  const stockDialogRef = useDialogAccessibility<HTMLDivElement>(Boolean(adjustingProduct), () => setAdjustingProduct(null));
+  const deleteDialogRef = useDialogAccessibility<HTMLDivElement>(Boolean(deletingProduct), () => setDeletingProduct(null));
 
   async function loadData() {
     try {
@@ -258,7 +262,7 @@ export default function ProductsPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           {/* Top Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -266,10 +270,10 @@ export default function ProductsPage() {
               <p className="text-xs text-zinc-500">Furniture, wood timber & bespoke craftsmanship inventory</p>
             </div>
 
-            {canManageProducts && <div className="flex items-center gap-3">
+            {canManageProducts && <div className="flex w-full sm:w-auto items-center gap-3">
               <button
                 onClick={openAddModal}
-                className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <PackagePlus className="w-4 h-4" />
                 <span>+ Add Product</span>
@@ -298,6 +302,7 @@ export default function ProductsPage() {
               <div className="relative w-full md:w-80">
                 <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
                 <input
+                  aria-label="Search products"
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -309,6 +314,7 @@ export default function ProductsPage() {
               <div className="flex items-center gap-3 w-full md:w-auto">
                 <button
                   onClick={() => setLowStockOnly(!lowStockOnly)}
+                  aria-pressed={lowStockOnly}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition cursor-pointer uppercase tracking-wider ${
                     lowStockOnly
                       ? 'bg-black text-white border-black shadow-xs'
@@ -320,6 +326,7 @@ export default function ProductsPage() {
                 </button>
 
                 <select
+                  aria-label="Filter products by category"
                   value={selectedCategoryId}
                   onChange={(e) => setSelectedCategoryId(e.target.value)}
                   className="px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-800 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
@@ -457,6 +464,7 @@ export default function ProductsPage() {
                           onClick={() => openEditModal(p)}
                           className="p-1.5 text-zinc-600 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
                           title="Edit Product"
+                          aria-label={`Edit ${p.name}`}
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -464,6 +472,7 @@ export default function ProductsPage() {
                           onClick={() => setDeletingProduct(p)}
                           className="p-1.5 text-zinc-400 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
                           title="Delete Product"
+                          aria-label={`Delete ${p.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -486,15 +495,15 @@ export default function ProductsPage() {
       {/* Add / Edit Product Modal */}
       {isProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-zinc-300 my-8 max-h-[90vh] overflow-y-auto">
+          <div ref={productDialogRef} role="dialog" aria-modal="true" aria-labelledby="product-dialog-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-zinc-300 my-3 sm:my-8 max-h-[94vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-5">
               <div>
-                <h3 className="font-black text-xl text-black">
+                <h3 id="product-dialog-title" className="font-black text-xl text-black">
                   {editingProduct ? 'Edit Furniture / Timber Product' : 'Add New Product'}
                 </h3>
                 <p className="text-xs text-zinc-400">Complete item specifications and product media</p>
               </div>
-              <button onClick={() => setIsProductModalOpen(false)} className="text-zinc-400 hover:text-black p-1">
+              <button type="button" onClick={() => setIsProductModalOpen(false)} aria-label="Close product dialog" className="text-zinc-400 hover:text-black p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -508,10 +517,12 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       Product Name *
                     </label>
                     <input
+                      id="product-name"
+                      data-autofocus
                       type="text"
                       required
                       value={name}
@@ -523,7 +534,7 @@ export default function ProductsPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                      <label htmlFor="product-category" className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                         Category *
                       </label>
                       <button
@@ -536,6 +547,7 @@ export default function ProductsPage() {
                     </div>
 
                     <select
+                      id="product-category"
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
                       required
@@ -555,10 +567,11 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-sku" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       SKU / Code
                     </label>
                     <input
+                      id="product-sku"
                       type="text"
                       value={sku}
                       onChange={(e) => setSku(e.target.value)}
@@ -568,10 +581,11 @@ export default function ProductsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-selling-price" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       Selling Price (₹) *
                     </label>
                     <input
+                      id="product-selling-price"
                       type="number"
                       required
                       min={0}
@@ -582,10 +596,11 @@ export default function ProductsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-cost-price" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       Cost Price (₹)
                     </label>
                     <input
+                      id="product-cost-price"
                       type="number"
                       min={0}
                       value={costPrice}
@@ -602,12 +617,13 @@ export default function ProductsPage() {
                   2. Inventory & Alerts
                 </h4>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-current-stock" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       Current Stock *
                     </label>
                     <input
+                      id="product-current-stock"
                       type="number"
                       required
                       min={0}
@@ -618,10 +634,11 @@ export default function ProductsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                    <label htmlFor="product-low-stock" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                       Low-Stock Alert Level *
                     </label>
                     <input
+                      id="product-low-stock"
                       type="number"
                       required
                       min={0}
@@ -653,10 +670,11 @@ export default function ProductsPage() {
                 </h4>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="product-description" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Product Description
                   </label>
                   <textarea
+                    id="product-description"
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -666,10 +684,11 @@ export default function ProductsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                  <label htmlFor="product-notes" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                     Internal Notes
                   </label>
                   <input
+                    id="product-notes"
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -712,6 +731,7 @@ export default function ProductsPage() {
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <input
+                        aria-label={`Variant ${idx + 1} name`}
                         type="text"
                         placeholder="Variant name (e.g. Teak Finish)"
                         value={v.name}
@@ -723,6 +743,7 @@ export default function ProductsPage() {
                         className="w-1/2 px-3 py-1.5 bg-zinc-50 border border-zinc-300 rounded-lg text-xs font-medium text-black"
                       />
                       <input
+                        aria-label={`Variant ${idx + 1} price`}
                         type="number"
                         placeholder="Price (₹)"
                         value={v.price}
@@ -736,6 +757,7 @@ export default function ProductsPage() {
                       <button
                         type="button"
                         onClick={() => setVariants(variants.filter((_, i) => i !== idx))}
+                        aria-label={`Remove variant ${idx + 1}`}
                         className="p-1 text-zinc-400 hover:text-black"
                       >
                         <X className="w-4 h-4" />
@@ -746,24 +768,24 @@ export default function ProductsPage() {
               )}
 
               {formError && (
-                <div className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
+                <div role="alert" className="p-3 bg-zinc-900 border border-zinc-700 text-white rounded-xl text-xs font-medium">
                   {formError}
                 </div>
               )}
 
               {/* Form Action Buttons */}
-              <div className="pt-4 border-t border-zinc-200 flex items-center gap-3">
+              <div className="pt-4 border-t border-zinc-200 flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setIsProductModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100 cursor-pointer"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !name.trim()}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {saving ? (
                     <>
@@ -785,10 +807,10 @@ export default function ProductsPage() {
       {/* Adjust Stock Modal */}
       {adjustingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-zinc-300">
+          <div ref={stockDialogRef} role="dialog" aria-modal="true" aria-labelledby="stock-adjust-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-4 sm:p-6 border border-zinc-300">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-bold text-black">Stock Adjustment</h3>
-              <button onClick={() => setAdjustingProduct(null)} className="text-zinc-400 hover:text-black">
+              <h3 id="stock-adjust-title" className="font-bold text-black">Stock Adjustment</h3>
+              <button type="button" onClick={() => setAdjustingProduct(null)} aria-label="Close stock adjustment dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -800,10 +822,12 @@ export default function ProductsPage() {
               </p>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="stock-adjust-quantity" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   New Quantity Count *
                 </label>
                 <input
+                  id="stock-adjust-quantity"
+                  data-autofocus
                   type="number"
                   required
                   min={0}
@@ -814,10 +838,11 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="stock-adjust-notes" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Adjustment Reason / Notes
                 </label>
                 <input
+                  id="stock-adjust-notes"
                   type="text"
                   value={adjustmentNotes}
                   onChange={(e) => setAdjustmentNotes(e.target.value)}
@@ -850,15 +875,15 @@ export default function ProductsPage() {
       {/* Delete Product Confirmation Modal */}
       {deletingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-zinc-300">
+          <div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-product-title" aria-describedby="delete-product-description" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-4 sm:p-6 border border-zinc-300">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-bold text-black text-lg">Delete Product</h3>
-              <button onClick={() => setDeletingProduct(null)} className="text-zinc-400 hover:text-black">
+              <h3 id="delete-product-title" className="font-bold text-black text-lg">Delete Product</h3>
+              <button type="button" onClick={() => setDeletingProduct(null)} aria-label="Close delete product dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm text-zinc-700 mb-4">
+            <p id="delete-product-description" className="text-sm text-zinc-700 mb-4">
               Are you sure you want to delete <span className="font-bold text-black">"{deletingProduct.name}"</span>? This will remove the product and its gallery images from WOODEX.
             </p>
 
@@ -866,6 +891,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setDeletingProduct(null)}
+                data-autofocus
                 className="w-1/2 py-2 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider cursor-pointer hover:bg-zinc-100"
               >
                 Cancel

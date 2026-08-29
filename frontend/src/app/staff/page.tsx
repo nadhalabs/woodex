@@ -7,6 +7,7 @@ import { showError, showSuccess } from '@/lib/feedback';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility';
 
 export default function StaffPage() {
   const [me, setMe] = useState<any>(null);
@@ -21,6 +22,7 @@ export default function StaffPage() {
   const [role, setRole] = useState('staff');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const addStaffDialogRef = useDialogAccessibility<HTMLDivElement>(isAddModalOpen, () => setIsAddModalOpen(false));
 
   async function loadData() {
     try {
@@ -90,7 +92,7 @@ export default function StaffPage() {
           businessPlan={me?.business?.plan}
         />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-black tracking-tight">Staff & Permissions</h1>
@@ -100,7 +102,7 @@ export default function StaffPage() {
             {isStandard && me?.user?.role === 'owner' && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-black hover:bg-zinc-800 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Add Staff Member</span>
@@ -119,7 +121,7 @@ export default function StaffPage() {
           {isStandard && (
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[640px] text-left border-collapse">
                   <thead>
                     <tr className="bg-zinc-50 text-black text-[10px] uppercase font-black tracking-widest border-b border-zinc-200">
                       <th className="px-6 py-3.5">Name</th>
@@ -163,20 +165,22 @@ export default function StaffPage() {
       {/* Add Staff Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-zinc-300">
+          <div ref={addStaffDialogRef} role="dialog" aria-modal="true" aria-labelledby="add-staff-title" tabIndex={-1} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 border border-zinc-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
-              <h3 className="font-black text-black text-lg uppercase tracking-tight">Add Staff Member</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-zinc-400 hover:text-black">
+              <h3 id="add-staff-title" className="font-black text-black text-lg uppercase tracking-tight">Add Staff Member</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} aria-label="Close add staff dialog" className="text-zinc-400 hover:text-black">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="staff-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Full Name *
                 </label>
                 <input
+                  id="staff-name"
+                  data-autofocus
                   type="text"
                   required
                   value={name}
@@ -187,10 +191,11 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="staff-email" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Email Address *
                 </label>
                 <input
+                  id="staff-email"
                   type="email"
                   required
                   value={email}
@@ -201,10 +206,11 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="staff-password" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Initial Password *
                 </label>
                 <input
+                  id="staff-password"
                   type="password"
                   required
                   value={password}
@@ -214,10 +220,11 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label htmlFor="staff-role" className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
                   Role Permission *
                 </label>
                 <select
+                  id="staff-role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-semibold text-black focus:outline-none focus:border-black"
@@ -228,18 +235,18 @@ export default function StaffPage() {
                 </select>
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
+                  className="w-full sm:w-1/2 py-2.5 border border-zinc-300 text-zinc-800 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
+                  className="w-full sm:w-1/2 py-2.5 bg-black hover:bg-zinc-800 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md disabled:opacity-50"
                 >
                   {saving ? 'Adding...' : 'Add Member'}
                 </button>
