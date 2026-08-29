@@ -1,116 +1,67 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ArrowRight, Menu, X, Store } from 'lucide-react';
+import { ArrowRight, Menu, X } from 'lucide-react';
+
+const navLinks = [
+  { name: 'Features', href: '/#features' },
+  { name: 'Workflow', href: '/#workflow' },
+  { name: 'FAQ', href: '/faq' },
+];
 
 export function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
 
-  const navLinks = [
-    { name: 'Features', href: '/#features' },
-    { name: 'Workflow', href: '/#workflow' },
-    { name: 'FAQ', href: '/faq' },
-  ];
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md border-b border-zinc-900 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Brand Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-3.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-xl py-1 px-1.5"
-            aria-label="WOODEX Home"
-          >
-            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-black text-base shadow-md group-hover:bg-zinc-200 transition">
-              WX
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-black tracking-widest text-white uppercase leading-tight">
-                WOODEX
-              </span>
-              <span className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase">
-                Furniture & Timber OS
-              </span>
-            </div>
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0a]/95 backdrop-blur-md">
+      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-20">
+        <Link href="/" className="group flex min-h-11 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a]" aria-label="Woodex home">
+          <span className="grid h-10 w-10 place-items-center bg-[#f4f1eb] text-sm font-black tracking-[-0.04em] text-[#11110f] transition-colors group-hover:bg-[#d6b48d]">WX</span>
+          <span>
+            <span className="block text-base font-black tracking-[0.16em] text-white">WOODEX</span>
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-[#8f8a82]">Furniture business software</span>
+          </span>
+        </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8" aria-label="Main Navigation">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`text-sm font-semibold tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-lg px-2 py-1 ${
-                    isActive
-                      ? 'text-white font-bold'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Desktop CTA Action */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-zinc-200 text-black text-xs font-black tracking-widest uppercase py-2.5 px-5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white active:scale-[0.98]"
-            >
-              <Store className="w-4 h-4" />
-              <span>Sign In</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+        <nav className="hidden items-center gap-9 md:flex" aria-label="Main navigation">
+          {navLinks.map((link) => (
+            <Link key={link.name} href={link.href} className="text-sm font-medium text-[#aaa69f] transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a]">
+              {link.name}
             </Link>
-          </div>
+          ))}
+        </nav>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2.5 rounded-xl bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
+        <Link href="/login" className="group hidden min-h-11 items-center gap-2 border border-white/20 px-5 text-sm font-semibold text-[#f4f1eb] transition-colors hover:border-[#d6b48d] hover:bg-[#d6b48d] hover:text-[#11110f] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a] md:inline-flex">
+          Sign in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        </Link>
+
+        <button type="button" className="grid h-11 w-11 place-items-center border border-white/15 text-[#e2ded7] transition-colors hover:border-white/35 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white md:hidden" onClick={() => setMobileMenuOpen((open) => !open)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation">
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-zinc-800 bg-zinc-950 px-4 pt-3 pb-6 space-y-4">
-          <nav className="flex flex-col space-y-2">
+        <div id="mobile-navigation" className="border-t border-white/10 bg-[#0b0b0a] px-5 pb-6 pt-3 md:hidden">
+          <nav className="mx-auto flex max-w-[1440px] flex-col" aria-label="Mobile navigation">
             {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition"
-              >
+              <Link key={link.name} href={link.href} onClick={() => setMobileMenuOpen(false)} className="border-b border-white/10 py-4 text-base font-medium text-[#d7d2ca] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
                 {link.name}
               </Link>
             ))}
-          </nav>
-          <div className="pt-2 border-t border-zinc-900">
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-200 text-black text-xs font-black tracking-widest uppercase py-3 px-4 rounded-xl transition shadow-lg"
-            >
-              <Store className="w-4 h-4" />
-              <span>Sign In to Store</span>
-              <ArrowRight className="w-4 h-4" />
+            <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 bg-[#f4f1eb] px-5 text-sm font-bold text-[#11110f] hover:bg-[#d6b48d] focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+              Sign in <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-          </div>
+          </nav>
         </div>
       )}
     </header>
