@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
@@ -105,13 +106,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-zinc-900 flex items-center justify-between text-xs font-semibold text-zinc-400">
-            <a href="/" className="hover:text-white transition">
+          <div className="mt-6 pt-5 border-t border-zinc-900 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-zinc-400">
+            <Link href="/" className="hover:text-white transition">
               ← Return Home
-            </a>
-            <a href="/faq" className="hover:text-white transition">
+            </Link>
+            <Link href="/register" className="font-bold text-zinc-300 hover:text-white transition">
+              Create your business
+            </Link>
+            <Link href="/faq" className="hover:text-white transition">
               Store FAQ
-            </a>
+            </Link>
           </div>
         </div>
       </div>
