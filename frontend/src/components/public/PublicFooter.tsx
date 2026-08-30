@@ -14,7 +14,6 @@ export function PublicFooter() {
 
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs" aria-label="Footer navigation">
           <Link href="/#features" className="inline-flex min-h-11 items-center transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white">Features</Link>
-          <Link href="/#workflow" className="inline-flex min-h-11 items-center transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white">Workflow</Link>
           <Link href="/faq" className="inline-flex min-h-11 items-center transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white">FAQ</Link>
           <Link href="/login" className="inline-flex min-h-11 items-center transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white">Sign in</Link>
         </nav>

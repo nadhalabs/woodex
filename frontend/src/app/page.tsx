@@ -1,189 +1,204 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import {
+  Armchair,
   ArrowRight,
   Boxes,
   FileText,
-  PackageCheck,
+  MousePointer2,
   ReceiptText,
-  ShoppingBag,
+  RefreshCw,
+  ShieldCheck,
   Truck,
 } from 'lucide-react';
 import { PublicNavbar } from '@/components/public/PublicNavbar';
 import { PublicFooter } from '@/components/public/PublicFooter';
 
-const capabilities = [
-  {
-    label: 'Sell',
-    title: 'From quote to paid order',
-    description: 'Run counter sales, create quotations and issue invoices without switching tools.',
-    icon: ReceiptText,
-    details: ['Point of sale', 'Orders', 'Invoices'],
-  },
-  {
-    label: 'Manage',
-    title: 'Know what is in stock',
-    description: 'Keep products, timber specifications, stock levels and supplier purchases together.',
-    icon: Boxes,
-    details: ['Products', 'Inventory', 'Purchasing'],
-  },
-  {
-    label: 'Deliver',
-    title: 'Keep every promise visible',
-    description: 'Follow customers and orders from approval through workshop progress to delivery.',
-    icon: Truck,
-    details: ['Customers', 'Production', 'Delivery'],
-  },
+const strengths = [
+  { title: 'Furniture-first', detail: 'Workflows shaped for showrooms, stockrooms and daily sales.', icon: Armchair },
+  { title: 'Easy to use', detail: 'Clear screens that help every team member work confidently.', icon: MousePointer2 },
+  { title: 'Always connected', detail: 'Sales, inventory and purchasing stay aligned as work moves.', icon: RefreshCw },
+  { title: 'Role-ready access', detail: 'Focused access for owners, managers and staff.', icon: ShieldCheck },
 ];
 
-const workflow = [
-  { step: '01', label: 'Quote', detail: 'Price the right material and dimensions.', icon: FileText },
-  { step: '02', label: 'Sell', detail: 'Turn approval into an order or counter sale.', icon: ShoppingBag },
-  { step: '03', label: 'Prepare', detail: 'Track stock, purchasing and workshop progress.', icon: PackageCheck },
-  { step: '04', label: 'Deliver', detail: 'Dispatch, collect payment and close the order.', icon: Truck },
+const capabilities = [
+  { label: 'Sell', title: 'From quote to paid order', description: 'Create quotations, orders and invoices without switching tools.' },
+  { label: 'Manage', title: 'Know what is in stock', description: 'Products, stock and purchasing stay connected.' },
+  { label: 'Deliver', title: 'Keep every order visible', description: 'Track customers and orders through delivery.' },
 ];
+
+const paperTexture = `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 520 520"><filter id="paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".055 .32" numOctaves="5" seed="19" stitchTiles="stitch"/><feComponentTransfer><feFuncR type="linear" slope=".026" intercept=".932"/><feFuncG type="linear" slope=".026" intercept=".916"/><feFuncB type="linear" slope=".026" intercept=".889"/></feComponentTransfer></filter><rect width="520" height="520" filter="url(#paper)"/></svg>`;
+const paperBackground = {
+  backgroundColor: '#f1ede6',
+  backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(paperTexture)}")`,
+  backgroundSize: '520px 520px',
+} as const;
+
+const primaryLink = 'group inline-flex min-h-12 items-center justify-center gap-3 border border-[#b91c32] bg-[#b91c32] px-6 text-sm font-semibold text-[#fff1f0] transition-colors hover:border-[#9f172a] hover:bg-[#9f172a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b91c32] focus-visible:ring-offset-4 focus-visible:ring-offset-[#f1ede6] active:bg-[#851322]';
+
+function SalesPreview() {
+  return (
+    <div className="mt-8 flex-1 overflow-hidden rounded-[3px] border border-[#1b1a18]/20 bg-[#e8e3da]" aria-hidden="true">
+      <div className="flex h-10 items-center justify-between border-b border-[#1b1a18]/15 bg-[#1b1a18] px-4 text-[#f1ede6]">
+        <span className="text-[9px] font-bold tracking-[0.18em]">WOODEX</span>
+        <span className="text-[9px] text-[#aaa59d]">COUNTER</span>
+      </div>
+      <div className="grid min-h-64 grid-cols-[78px_1fr] sm:grid-cols-[118px_1fr]">
+        <div className="border-r border-[#1b1a18]/15 bg-[#ded8ce] p-3 sm:p-4">
+          <div className="h-1.5 w-10 bg-[#1b1a18]" />
+          <div className="mt-7 space-y-4 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#5f5a52] sm:text-[9px]">
+            <p className="text-[#1b1a18]">Counter</p>
+            <p>Orders</p>
+            <p>Invoices</p>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Current sale</span>
+            <span className="border border-[#1b1a18]/20 px-2 py-1 text-[8px] font-semibold">New order</span>
+          </div>
+          <div className="mt-6 space-y-3">
+            {['Quotation', 'Order', 'Invoice'].map((item, index) => (
+              <div key={item} className="flex items-center justify-between border-b border-[#1b1a18]/15 pb-3">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-7 w-7 place-items-center border border-[#1b1a18]/20 bg-[#f1ede6]">
+                    {index === 0 ? <FileText className="h-3.5 w-3.5" /> : <ReceiptText className="h-3.5 w-3.5" />}
+                  </span>
+                  <span className="text-[10px] font-semibold sm:text-xs">{item}</span>
+                </div>
+                <span className="text-[9px] text-[#6d675f]">Connected</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OperationsPreview() {
+  return (
+    <div className="mt-8 flex-1 overflow-hidden rounded-[3px] border border-[#1b1a18]/20 bg-[#e8e3da]" aria-hidden="true">
+      <div className="flex h-10 items-center justify-between border-b border-[#1b1a18]/15 bg-[#1b1a18] px-4 text-[#f1ede6]">
+        <span className="text-[9px] font-bold tracking-[0.18em]">WOODEX</span>
+        <span className="text-[9px] text-[#aaa59d]">OPERATIONS</span>
+      </div>
+      <div className="min-h-64 p-4 sm:p-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {['Products', 'Purchases', 'Delivery'].map((item) => (
+            <div key={item} className="border border-[#1b1a18]/15 bg-[#f1ede6] px-2 py-4 sm:px-4">
+              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-[#6d675f] sm:text-[9px]">{item}</p>
+              <div className="mt-5 h-px w-full bg-[#1b1a18]/20" />
+              <div className="mt-2 h-px w-2/3 bg-[#1b1a18]/10" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 border-t border-[#1b1a18]/20">
+          {[
+            { label: 'Products and stock', icon: Boxes },
+            { label: 'Purchasing', icon: ReceiptText },
+            { label: 'Order delivery', icon: Truck },
+          ].map(({ label, icon: Icon }) => (
+            <div key={label} className="flex items-center justify-between border-b border-[#1b1a18]/15 py-3">
+              <span className="flex items-center gap-3 text-[10px] font-semibold sm:text-xs"><Icon className="h-3.5 w-3.5" />{label}</span>
+              <span className="h-1.5 w-10 bg-[#1b1a18]/25" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#0b0b0a] text-[#f4f1eb] antialiased selection:bg-[#d6b48d] selection:text-[#17120e]">
+    <div className="min-h-screen overflow-x-clip bg-[#f1ede6] text-[#1b1a18] antialiased selection:bg-[#1b1a18] selection:text-[#f1ede6]" style={paperBackground}>
       <PublicNavbar />
 
       <main>
-        <section className="border-b border-white/10">
-          <div className="mx-auto grid min-h-[calc(100svh-5rem)] max-w-[1440px] lg:grid-cols-[0.86fr_1.14fr]">
-            <div className="flex items-center px-5 py-16 sm:px-8 sm:py-20 lg:px-12 xl:px-20">
-              <div className="max-w-[620px]">
-                <p className="mb-7 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c9c3b8] sm:text-xs">
-                  <span className="h-px w-8 bg-[#9c6d45]" aria-hidden="true" />
-                  Furniture business management software
-                </p>
+        <section className="border-b border-[#1b1a18]/15">
+          <div className="mx-auto flex min-h-[calc(100svh-72px)] max-w-[1440px] items-center px-5 py-16 sm:px-8 sm:py-24 lg:px-12 xl:px-20">
+            <div className="mx-auto w-full max-w-[1120px] text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b91c32] sm:text-xs">Furniture business software</p>
+              <h1 className="mx-auto mt-8 max-w-[12ch] font-serif text-[clamp(3.25rem,7.4vw,7rem)] font-normal leading-[0.96] tracking-[-0.055em] text-[#1b1a18]">Run your furniture business with clarity.</h1>
+              <p className="mx-auto mt-8 max-w-2xl text-base leading-7 text-[#625e57] sm:text-lg sm:leading-8">Sales, inventory, quotations, purchasing and delivery — managed from one simple workspace.</p>
+              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6">
+                <Link href="/register" className={`${primaryLink} w-full sm:w-auto`}>Create account<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></Link>
+                <Link href="/login" className="inline-flex min-h-12 w-full items-center justify-center border border-[#202a38] bg-[#fff1f0] px-6 text-sm font-semibold text-[#202a38] transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#202a38] focus-visible:ring-offset-4 focus-visible:ring-offset-[#f1ede6] active:bg-[#f4dfdf] sm:w-auto">Sign in</Link>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                <h1 className="max-w-[11ch] font-serif text-[clamp(3.15rem,6.7vw,6.5rem)] font-medium leading-[0.94] tracking-[-0.055em] text-[#f7f4ee]">
-                  Run your furniture business from one place.
-                </h1>
+        <section aria-labelledby="why-woodex" className="border-b border-[#1b1a18]/15">
+          <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 sm:py-24 lg:px-12 lg:py-28 xl:px-20">
+            <div className="text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#b91c32]">Designed around the work</p>
+              <h2 id="why-woodex" className="mx-auto mt-5 max-w-[18ch] font-serif text-4xl font-normal leading-[1.02] tracking-[-0.04em] text-[#202a38] sm:text-5xl lg:text-6xl">Why furniture teams choose Woodex.</h2>
+              <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-[#68635c] sm:text-base sm:leading-7">A focused workspace that keeps everyday operations clear, connected and easier to manage.</p>
+            </div>
 
-                <p className="mt-7 max-w-xl text-base leading-7 text-[#aaa69f] sm:mt-8 sm:text-lg sm:leading-8">
-                  Manage sales, inventory, quotations, purchases and delivery with one simple workspace.
-                </p>
+            <div className="mt-14 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
+              {strengths.map(({ title, detail, icon: Icon }) => (
+                <article key={title} className="text-center">
+                  <div className="mx-auto grid h-28 w-28 place-items-center rounded-full border border-[#b91c32]/20 bg-[#fff1f0] text-[#202a38] sm:h-32 sm:w-32">
+                    <Icon className="h-12 w-12 stroke-[1.25] sm:h-14 sm:w-14" aria-hidden="true" />
+                  </div>
+                  <h3 className="mt-7 text-lg font-semibold tracking-[-0.02em] text-[#202a38] sm:text-xl">{title}</h3>
+                  <p className="mx-auto mt-3 max-w-[16rem] text-sm leading-6 text-[#68635c]">{detail}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-                <div className="mt-9 flex flex-wrap items-center gap-5">
-                  <Link
-                    href="/register"
-                    className="group inline-flex min-h-12 items-center justify-center gap-3 bg-[#f4f1eb] px-6 text-sm font-bold text-[#11110f] transition-colors hover:bg-[#d6b48d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f4f1eb] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a] active:bg-[#c49c70]"
-                  >
-                    Create account
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href="#workflow"
-                    className="inline-flex min-h-12 items-center border-b border-[#8d8982] text-sm font-semibold text-[#d9d5ce] transition-colors hover:border-[#d6b48d] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f4f1eb] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a]"
-                  >
-                    See how it works
-                  </Link>
+        <section className="border-b border-[#1b1a18]/15">
+          <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24 xl:px-20">
+            <h2 className="border-b border-[#1b1a18]/20 pb-8 font-serif text-4xl font-normal leading-[1.04] tracking-[-0.04em] sm:text-5xl">Inside Woodex</h2>
+            <div className="mt-10 grid gap-8 lg:grid-cols-2">
+              <article className="flex h-full flex-col">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[3px] border-t-2 border-[#b91c32] bg-[#202a38] text-[#fff1f0]">
+                    <ReceiptText className="h-4 w-4 stroke-[1.5]" aria-hidden="true" />
+                  </span>
+                  <h3 className="font-serif text-3xl font-normal tracking-[-0.03em]">Sales that stay connected</h3>
                 </div>
-
-                <div className="mt-14 grid max-w-lg grid-cols-2 gap-x-8 gap-y-5 border-t border-white/10 pt-6 text-sm text-[#aaa69f] sm:grid-cols-3">
-                  <span className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-[#bd8b5f]" aria-hidden="true" /> POS & sales</span>
-                  <span className="flex items-center gap-2"><Boxes className="h-4 w-4 text-[#bd8b5f]" aria-hidden="true" /> Live stock</span>
-                  <span className="flex items-center gap-2"><Truck className="h-4 w-4 text-[#bd8b5f]" aria-hidden="true" /> Delivery</span>
+                <SalesPreview />
+              </article>
+              <article className="flex h-full flex-col">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[3px] border-t-2 border-[#b91c32] bg-[#202a38] text-[#fff1f0]">
+                    <Boxes className="h-4 w-4 stroke-[1.5]" aria-hidden="true" />
+                  </span>
+                  <h3 className="font-serif text-3xl font-normal tracking-[-0.03em]">Know what is moving</h3>
                 </div>
-              </div>
-            </div>
-
-            <div className="relative min-h-[430px] overflow-hidden border-t border-white/10 lg:min-h-0 lg:border-l lg:border-t-0">
-              <Image
-                src="/images/woodex-showroom-workshop.png"
-                alt="A modern furniture showroom connected to an active timber workshop"
-                fill
-                priority
-                sizes="(max-width: 1023px) 100vw, 58vw"
-                className="object-cover object-[62%_center] transition-transform duration-700 ease-out hover:scale-[1.015]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/15 lg:bg-gradient-to-r lg:from-[#0b0b0a]/30 lg:via-transparent lg:to-transparent" aria-hidden="true" />
-              <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between border-t border-white/40 pt-4 text-white sm:bottom-8 sm:left-8 sm:right-8">
-                <p className="max-w-[20rem] text-xs font-medium leading-5 text-white/85">
-                  Built around the way showrooms, workshops and timber teams actually work.
-                </p>
-                <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-white/70 sm:block">Showroom ↔ Workshop</span>
-              </div>
+                <OperationsPreview />
+              </article>
             </div>
           </div>
         </section>
 
-        <section id="features" className="scroll-mt-24 bg-[#f1ede5] text-[#171614]">
-          <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 sm:py-28 lg:px-12 xl:px-20">
-            <div className="grid gap-8 border-b border-black/15 pb-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#775438]">One clear view</p>
-              <h2 className="max-w-3xl font-serif text-4xl leading-[1.02] tracking-[-0.035em] sm:text-5xl lg:text-6xl">
-                Everything needed to move an order forward.
-              </h2>
-            </div>
-
-            <div className="grid lg:grid-cols-3">
-              {capabilities.map((capability, index) => {
-                const Icon = capability.icon;
-                return (
-                  <article
-                    key={capability.label}
-                    className={`py-10 lg:px-8 lg:py-12 ${index > 0 ? 'border-t border-black/15 lg:border-l lg:border-t-0' : ''} ${index === 0 ? 'lg:pl-0' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#775438]">{capability.label}</p>
-                      <Icon className="h-5 w-5 text-[#775438]" aria-hidden="true" />
-                    </div>
-                    <h3 className="mt-10 max-w-[15ch] text-2xl font-semibold tracking-[-0.025em]">{capability.title}</h3>
-                    <p className="mt-4 max-w-sm text-[15px] leading-7 text-[#656159]">{capability.description}</p>
-                    <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-black/10 pt-5 text-xs font-semibold text-[#4d4942]" aria-label={`${capability.label} features`}>
-                      {capability.details.map((detail) => <li key={detail}>{detail}</li>)}
-                    </ul>
-                  </article>
-                );
-              })}
+        <section id="features" className="scroll-mt-24 border-b border-[#1b1a18]/15">
+          <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24 xl:px-20">
+            <div className="grid overflow-hidden rounded-[4px] border-t-4 border-[#b91c32] bg-[#202a38] text-[#f7f4ee] lg:grid-cols-3">
+              {capabilities.map((capability, index) => (
+                <article key={capability.label} className={`px-6 py-10 sm:px-8 sm:py-12 lg:min-h-80 lg:px-10 lg:py-14 ${index > 0 ? 'border-t border-[#fff1f0]/15 lg:border-l lg:border-t-0' : ''}`}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#fff1f0]">{capability.label}</p>
+                  <h2 className="mt-12 max-w-[14ch] font-serif text-[2rem] font-normal leading-[1.08] tracking-[-0.035em] sm:text-[2.4rem]">{capability.title}</h2>
+                  <p className="mt-5 max-w-sm text-[15px] leading-7 text-[#ded2d2]">{capability.description}</p>
+                </article>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="workflow" className="scroll-mt-24 border-y border-white/10 bg-[#11110f]">
-          <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 sm:py-28 lg:px-12 xl:px-20">
-            <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#bd8b5f]">A simpler workflow</p>
-              <div>
-                <h2 className="max-w-3xl font-serif text-4xl leading-[1.03] tracking-[-0.035em] sm:text-5xl lg:text-6xl">From first quote to final delivery.</h2>
-                <p className="mt-5 max-w-2xl text-base leading-7 text-[#a7a29a]">Every team works from the same order, so the counter, stockroom and workshop stay in step.</p>
-              </div>
+        <section className="px-5 py-12 sm:px-8 sm:py-16 lg:px-12 xl:px-20">
+          <div className="mx-auto grid max-w-[1280px] overflow-hidden rounded-[4px] border border-[#202a38]/20 border-t-4 border-t-[#b91c32] bg-[#fff1f0] text-[#202a38] lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="px-6 py-12 sm:px-10 sm:py-16 lg:px-16 lg:py-20">
+              <h2 className="max-w-[18ch] font-serif text-4xl font-normal leading-[1.04] tracking-[-0.04em] sm:text-5xl">Ready to run your business with less friction?</h2>
             </div>
-
-            <ol className="mt-14 grid border-t border-white/15 md:grid-cols-2 lg:grid-cols-4">
-              {workflow.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.step} className={`relative py-8 md:px-7 lg:min-h-64 lg:py-9 ${index > 0 ? 'border-t border-white/15 md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-l-0 lg:border-l' : ''} ${index === 0 ? 'md:pl-0' : ''}`}>
-                    <div className="flex items-center justify-between text-[#857f76]">
-                      <span className="font-mono text-xs">{item.step}</span>
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </div>
-                    <h3 className="mt-12 text-2xl font-semibold tracking-[-0.02em] text-[#f4f1eb]">{item.label}</h3>
-                    <p className="mt-3 max-w-[16rem] text-sm leading-6 text-[#9f9a92]">{item.detail}</p>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        </section>
-
-        <section className="bg-[#0b0b0a]">
-          <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_auto] lg:items-end lg:px-12 xl:px-20">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#bd8b5f]">Ready when you are</p>
-              <h2 className="mt-5 max-w-3xl font-serif text-4xl leading-[1.03] tracking-[-0.035em] sm:text-5xl lg:text-6xl">A better way to run the work behind the furniture.</h2>
-            </div>
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center lg:flex-col lg:items-stretch">
-              <Link href="/register" className="group inline-flex min-h-12 items-center justify-center gap-3 bg-[#f4f1eb] px-6 text-sm font-bold text-[#11110f] transition-colors hover:bg-[#d6b48d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f4f1eb] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a] active:bg-[#c49c70]">
-                Create account <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </Link>
-              <Link href="/login" className="inline-flex min-h-12 items-center justify-center px-6 text-sm font-semibold text-[#d7d2ca] transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f4f1eb] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0a]">
-                Already use Woodex? Sign in
-              </Link>
+            <div className="flex flex-col justify-center gap-3 px-6 pb-10 sm:flex-row sm:px-10 lg:flex-col lg:px-12 lg:py-10">
+              <Link href="/register" className="group inline-flex min-h-12 items-center justify-center gap-3 border border-[#202a38] bg-[#202a38] px-6 text-sm font-semibold text-[#f7f4ee] transition-colors hover:bg-[#151b24] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#202a38] focus-visible:ring-offset-4 focus-visible:ring-offset-[#f7f4ee] active:bg-[#0e1319]">Create account<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></Link>
+              <Link href="/login" className="inline-flex min-h-12 items-center justify-center border border-[#202a38] bg-transparent px-6 text-sm font-semibold text-[#202a38] transition-colors hover:bg-[#fff1f0] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#202a38] focus-visible:ring-offset-4 focus-visible:ring-offset-[#f7f4ee] active:bg-[#f4dfdf]">Sign in</Link>
             </div>
           </div>
         </section>
